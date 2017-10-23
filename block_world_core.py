@@ -180,21 +180,17 @@ class env:
 
     def get_json_params(self, args):
         r = self.do("get_json_params")
-        json_value = r.json()
-        print('json respone ' + str(json_value))
-        return json_value
+        return r.json()
 
     def get_json_objectinfo(self, args):
         r = self.do("get_json_objectinfo")
-        json_value = r.json()
-        print(json_value)
-        return json_value
+        return r.json()
 
     def set_json_params(self, args):
-        r = self.do("set_json_params", json.dumps(args))
+        r = self.do("set_json_params", args)
 
     def reset_json_objectinfo(self, args):
-        r = self.do("reset_json_objectinfo", json.dumps(args))
+        r = self.do("reset_json_objectinfo", args)
         self.extract_response(r.json())
 
     def json_vector3(self, vec3):
@@ -209,7 +205,7 @@ class env:
         new_q['x'] = float(q[0])
         new_q['y'] = float(q[1])
         new_q['z'] = float(q[2])
-        new_q['w'] = float(q[4])
+        new_q['w'] = float(q[3])
         return new_q
 
     def json_transform(self, position, rotation, localScale):
@@ -334,23 +330,23 @@ def env_test(argv):
             json_value = x.get_json_params(args)
             if args:
                 var_dict[args] = json_value
+            print(json.dumps(json_value))
 
         def do_get_json_objectinfo(self, args):
             json_value = x.get_json_objectinfo(args)
             if args:
                 var_dict[args] = json_value
+            print(json.dumps(json_value))
 
         def do_set_json_params(self, args):
-            if args in var_dict:
-                x.set_json_params(var_dict[args])
-            else:
-                x.set_json_params(args)
+            js = json.dumps(var_dict[args]) if args in var_dict else args
+            print(js)
+            x.set_json_params(js)
 
         def do_reset_json_objectinfo(self, args):
-            if args in var_dict:
-                x.reset_json_objectinfo(var_dict[args])
-            else:
-                x.reset_json_objectinfo(args)
+            js = json.dumps(var_dict[args]) if args in var_dict else args
+            print(js)
+            x.reset_json_objectinfo(js)
             d.show(x)
 
         def do_move_finger(self, args):

@@ -45,8 +45,7 @@ def main(argv):
         episode_rew = 0
         while not done:
             env.render()
-            action = env.step(act(obs[None])[0])
-            print('action is {}'.format(action))
+            action = act(obs[None])[0]
             obs, rew, done, _ = env.step(action)
 
             episode_rew += rew
