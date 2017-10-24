@@ -29,7 +29,7 @@ public class ObjectCollision : MonoBehaviour
 
 		if (transform.position.y < 0) {
 			// object has fallen below the tray
-			trayscript.o.ObjList.Remove(gameObject);
+			trayscript.ObjList.Remove(gameObject);
 			Object.Destroy (gameObject);
 		}
 

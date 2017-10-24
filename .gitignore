@@ -2,3 +2,8 @@
 __pycache__
 *.pkl
 *.out
+*.csproj
+*.meta
+*.mat
+*.sln
+*.userprefs

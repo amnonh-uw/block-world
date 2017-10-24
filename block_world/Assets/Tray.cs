@@ -22,7 +22,7 @@ public class Params
 	public float fingerDistFromTray = 0.2f;
 	public float fingerMaxHeight = 0.2f;
 	public float fingerSize = 0.05f;
-	public float TargetSize = 0.01f;
+	public float TargetSize = 0.05f;
 	public float StereoDistance = 0.1f;
 
 	bool Nonzero(float f) {
@@ -103,58 +103,116 @@ public class Params
 	}
 };
 
-[System.Serializable]
-public class ObjectInfo
-{
-	public Vector3 position;
-	public Quaternion rotation;
-	public Vector3 localScale;
-	public Vector4 color;
+class ElementSplitter {
+	string[] elems;
+	int index;
 
-	public  ObjectInfo(GameObject g) {
-		FromWorldTransform (g.transform);
-		color = g.GetComponent<Renderer> ().material.color;
-	}
-
-	static float getElement(string[] elems, int index, float def)
-	{
-		if (index < elems.Length)
-			return System.Convert.ToSingle (elems [index]);
-		else
-			return def;
-	}
-
-	public ObjectInfo(string s) {
+	public ElementSplitter(string s) {
+		index = 0;
 		s = s.Replace (" ", string.Empty);
 		s = s.Replace ("(", string.Empty);
 		s = s.Replace (")", string.Empty);
 
-		string[] elems = s.Split (',');
+ 		elems = s.Split (',');
+	}
 
-		int i = 0;
-		position = Vector3 (getElement (elems, i++, 0),
-			getElement (elems, i++, 0),
-			getElement (elems, i++, 0));
-		
-		rotation = Quaternion (getElement (elems, i++, 0),
-			getElement (elems, i++, 0),
-			getElement (elems, i++, 0),
-			getElement (elems, i++, 1));
+	public float GetNext(float def)
+	{
+		if (index < elems.Length) {
+			string s = elems [index++].Trim();
+			if (s == string.Empty)
+				return def;
+			return System.Convert.ToSingle (s);
+		} else
+			return def;
+	}
 
-		localScale = Vector3 (getElement (elems, i++, 0),
-			getElement (elems, i++, 0),
-			getElement (elems, i++, 0));
+	public Vector3 GetNext(Vector3 def) {
+		return new Vector3 (GetNext (def.x), GetNext (def.y), GetNext (def.z));
+	}
 
-		color = position = Vector4 (getElement (elems, i++, 0),
-			getElement (elems, i++, 0),
-			getElement (elems, i++, 0),
-			getElement (elems, i++, 0));
+	public Vector4 GetNext(Vector4 def) {
+		return new Vector4 (GetNext (def.x), GetNext (def.y), GetNext (def.z), GetNext (def.w));
+	}
+
+	public Quaternion GetNext(Quaternion def) {
+		return new Quaternion (GetNext (def.x), GetNext (def.y), GetNext (def.z), GetNext (def.w));
 	}
 		
+		
+}
+
+
+[System.Serializable]
+public class ObjectInfo
+{
+	public Vector3 localScale;
+	public Vector3 position;
+	public Quaternion rotation;
+	public Vector4 color;
+
+	public  ObjectInfo(GameObject go) {
+		FromWorldTransform (go.transform);
+		color = go.GetComponent<Renderer> ().material.color;
+	}
+
+	public void SetObject(GameObject go) {
+		SetObjectTransform(go);
+		go.GetComponent<Renderer> ().material.color = color;
+	}
+
+	public void SetObjectTransform(GameObject go) {
+		go.transform.position = position;
+		go.transform.rotation = rotation;
+		go.transform.localScale = localScale;
+	}
+		
+	void Initialize(string s, GameObject go) {
+		Vector3 def_position;
+		Quaternion def_rotation;
+		Vector3 def_localScale;
+		Vector4 def_color = Color.green;
+
+		if (go == null) {
+			def_position = Vector3.zero;
+			def_rotation = Quaternion.identity;
+			def_localScale = Vector3.one;
+			def_color = Color.green;
+		} else {
+			def_position = go.transform.position;
+			def_rotation = go.transform.rotation;
+			def_localScale = go.transform.localScale;
+			def_color = go.GetComponent<Renderer> ().material.color;
+		}
+
+		ElementSplitter es = new ElementSplitter (s);
+
+
+		position = es.GetNext (def_position);
+		rotation = es.GetNext (def_rotation);
+		localScale = es.GetNext (def_localScale);
+		color = es.GetNext (def_color);
+	}
+
+	public ObjectInfo(string s, GameObject go) {
+		Initialize (s, go);
+	}
+
+	public ObjectInfo(string s) {
+		Initialize (s, null);
+	}
+
 	public void FromWorldTransform(Transform t) {
 		position = t.position;
 		rotation = t.rotation;
 		localScale = t.localScale;
+	}
+
+	public void Dump() {
+		Debug.LogFormat ("position {0}", position);
+		Debug.LogFormat ("rotation {0}", rotation);
+		Debug.LogFormat ("localScale {0}", localScale);
+		Debug.LogFormat ("color {0}", color);
 	}
 }
 
@@ -165,10 +223,10 @@ class ObjectsInfo {
 	public ObjectInfo target;
 	public ObjectInfo main_camera;
 
-	ObjectsInfo(Tray t) {
+	public ObjectsInfo(Tray t) {
 		finger = new ObjectInfo (t.finger);
 		target = new ObjectInfo (t.target);
-		main_camera = new ObjectInfo (Camera.main);
+		main_camera = new ObjectInfo (Camera.main.gameObject);
 
 		foreach (GameObject go in t.ObjList)
 			ObjList.Add (new ObjectInfo(go));
@@ -243,6 +301,9 @@ public class Tray : MonoBehaviour
     void Start()
     {
 		p = new Params () ;
+		CreateCameras ();
+		finger = null;
+		target = null;
 		CommandCounter = 0;
 
         listener = new HttpListener();
@@ -346,24 +407,6 @@ public class Tray : MonoBehaviour
 			finger = null;
 		}
 
-		if (cam1 != null) {
-			Destroy (cam1.targetTexture);
-			cam1.targetTexture = null;
-			Destroy (cam1);
-			cam1 = null;
-			Destroy (cam1_controller);
-			cam1_controller = null;
-		}
-
-		if (cam2 != null) {
-			Destroy (cam2.targetTexture);
-			cam2.targetTexture = null;
-			Destroy (cam2);
-			cam2 = null;
-			Destroy (cam2_controller);
-			cam2_controller = null;
-		}
-
 		Resetting = true;
 		Ready = false;
 		TrackDropping = false;
@@ -389,7 +432,6 @@ public class Tray : MonoBehaviour
 	{
 		InitializeValues ();
 		CreateTray ();
-		CreateCameras ();
 		DropNextObject();
 		finger = CreateRandomFinger(p.fingerDistFromTray, p.fingerSize);
 	}
@@ -399,6 +441,11 @@ public class Tray : MonoBehaviour
 		ClearObjects ();
 		DestroyTray ();
 		CreateTray ();
+		if (finger == null)
+			finger = CreateRandomFinger(p.fingerDistFromTray, p.fingerSize);
+		if (target == null)
+			target = CreateRandomTarget();
+			
 	}
 
 	private void DestroyTray()
@@ -473,32 +520,44 @@ public class Tray : MonoBehaviour
 
 	void AddObject(ObjectInfo info)
 	{
-		xxxxxxxxx===999999;
+		GameObject new_object = CreateObject ();
+
+		info.SetObject (new_object);
 	}
 
-	GameObject CreateObject() 
+	GameObject CreateObject()
 	{
 		GameObject obj = GameObject.CreatePrimitive(PrimitiveType.Cube);
-	
+
 		Material mat = Object.Instantiate(ObjBaseMat);
-		mat.color = Random.ColorHSV(0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f);
 		obj.GetComponent<Renderer>().material = mat;
 		obj.AddComponent<Rigidbody>();
-		obj.name = "Drop Object";
+		obj.name = "Object";
+		ObjList.Add(obj);
+
+		return obj;
+	}
+
+	GameObject CreateRandomObject() 
+	{
+		GameObject obj = CreateObject ();
+	
+		Material mat = Object.Instantiate(ObjBaseMat);
+		Renderer r = obj.GetComponent<Renderer> ();
+		r.material = mat;
+		r.material.color = Random.ColorHSV(0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f);
 
 		return obj;	
 	}
 
-    GameObject DropObject(float size, float xPos, float zPos)
+    void DropObject(float size, float xPos, float zPos)
 	{
-		GameObject obj = CreateObject ();
+		GameObject obj = CreateRandomObject ();
         obj.transform.localScale = new Vector3(size, size, size);
         obj.transform.position = new Vector3(xPos, DropHeight, zPos);
    
        	ObjectCollision colscript = obj.AddComponent<ObjectCollision>();
-        colscript.trayscript = this;
-
-        return obj;
+		colscript.trayscript = this;
     }
 
     public void DropNextObject()
@@ -511,13 +570,10 @@ public class Tray : MonoBehaviour
         }
 
         float objSize = Random.Range(p.ObjMinSize, p.ObjMaxSize);
-
         float xPos = Random.Range(MinDropLength + objSize, MaxDropLength - objSize);
         float zPos = Random.Range(MinDropWidth + objSize, MaxDropWidth - objSize);
 
-        GameObject obj = DropObject(objSize, xPos, zPos);
-
-        ObjList.Add(obj);
+		DropObject (objSize, xPos, zPos);
     }
 
 	void SetFinger(ObjectInfo info)
@@ -525,9 +581,7 @@ public class Tray : MonoBehaviour
 		if (finger == null)
 			finger = CreateFinger ();
 
-		finger.transform.position = info.position;
-		finger.transform.rotation = info.rotation;
-		finger.transform.localScale = info.localScale;
+		info.SetObjectTransform (finger);
 	}
 
 	GameObject CreateFinger()
@@ -566,14 +620,13 @@ public class Tray : MonoBehaviour
 		if (target == null)
 			target = CreateTarget ();
 
-		target.transform.position = info.position;
-		target.transform.rotation = info.rotation;
-		target.transform.localScale = info.localScale;
+		info.SetObjectTransform (target);
 	}
 
 	GameObject CreateTarget()
 	{
 		GameObject targ = GameObject.CreatePrimitive(PrimitiveType.Cube);
+		targ.GetComponent<Renderer> ().material.color = Color.black;
 		targ.name = "Target";
 
 		return (targ);
@@ -589,11 +642,14 @@ public class Tray : MonoBehaviour
 
 		if (ObjList.Count != 0) {
 			RaycastHit hit = RandomTarget ();
-			Assert.IsTrue (hit.collider.name == "Drop Object");
+			Assert.IsTrue (hit.collider.name == "Object");
 
 			position = hit.point;
 			rotation = Quaternion.LookRotation (hit.normal);
-			targ.transform.parent = hit.collider.gameObject.transform;
+			//
+			// Don't set the target parent, to allow targets without objects
+			//
+			// targ.transform.parent = hit.collider.gameObject.transform;
 		} else {
 			//
 			// No objects, just put the target in a random point
@@ -697,7 +753,7 @@ public class Tray : MonoBehaviour
 					//	clear_tray
 					//	set_finger
 					//	set_target
-					//	set_cams
+					//	move_cams
 					//	add_object
 					//  then sequence of move_finger and move_cams
 					//	
@@ -710,13 +766,13 @@ public class Tray : MonoBehaviour
 					if (listenerAction == "clear_tray")
 					{
 						ClearTray ();
-						NoResponse ();
+						takeCameraShot = true;
 						listenerAction = null;
 					}
 
 					if (listenerAction == "set_finger")
 					{
-						ObjectInfo info = new ObjectInfo (listenerArgs);
+						ObjectInfo info = new ObjectInfo (listenerArgs, finger);
 						SetFinger (info);
 						takeCameraShot = true;
 						listenerAction = null;
@@ -724,7 +780,7 @@ public class Tray : MonoBehaviour
 
 					if (listenerAction == "set_target")
 					{
-						ObjectInfo info = new ObjectInfo (listenerArgs);
+						ObjectInfo info = new ObjectInfo (listenerArgs, target);
 						SetTarget (info);
 						takeCameraShot = true;
 						listenerAction = null;
@@ -793,7 +849,7 @@ public class Tray : MonoBehaviour
 					}
 
 					if (listenerAction == "get_json_objectinfo") {
-						ObjectsInfo oi = new ObjectsInfo (tray);
+						ObjectsInfo oi = new ObjectsInfo (this);
 						JsonResponse (oi.ToJson ());
 						listenerAction = null;
 					}
@@ -932,30 +988,12 @@ class Pose
 	public Vector3 position;
 	public Vector3 rotation;
 
-	static float getElement(string[] elems, int index, float def)
-	{
-		if (index < elems.Length)
-			return System.Convert.ToSingle (elems [index]);
-		else
-			return def;
-	}
-
 	public Pose(string s)
 	{
-		s = s.Replace (" ", string.Empty);
-		s = s.Replace ("(", string.Empty);
-		s = s.Replace (")", string.Empty);
+		ElementSplitter es = new ElementSplitter (s);
 
-		string[] elems = s.Split (',');
-
-		int i = 0;
-		position = Vector3 (getElement (elems, i++, 0),
-			getElement (elems, i++, 0),
-			getElement (elems, i++, 0));
-
-		rotation = Vector3 (getElement (elems, i++, 0),
-			getElement (elems, i++, 0),
-			getElement (elems, i++, 0));
+		position = es.GetNext(Vector3.zero);
+		rotation = es.GetNext(Vector3.zero);
 	}
 
 	public override string ToString()

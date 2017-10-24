@@ -15,13 +15,14 @@ import json
 class env:
     last_port = 9000
 
-    def __init__(self, log="/dev/stdout", pos_unit=None, rot_unit=None,run = True):
+    def __init__(self, log="/dev/stdout", pos_unit=None, rot_unit=None,run = True, verbose=False):
         self.port = env.last_port
         self.uri = "http://localhost:" + str(self.port) + "/"
         env.last_port += 1
         self.pos_unit = pos_unit
         self.rot_unit = rot_unit
         self.log = log
+        self.verbose = verbose
 
         self.first_connection = True
         if run:
@@ -53,6 +54,11 @@ class env:
         not_done = True
         count = 0
 
+        args = self.make_string(args)
+        if self.verbose:
+            print("{} {}".format(command,"" if args is None else args))
+
+
         while not_done:
             try:
                 r = requests.post(self.uri, data={"command": command, "args": args}, timeout=60)
@@ -74,6 +80,21 @@ class env:
 
         return r
 
+    def make_string(self, args):
+        if args is None:
+            return args
+
+        if type(args) is str:
+            return args
+
+        if type(args) is np.ndarray:
+            args_arrstr = np.char.mod('%f', args)
+            # combine to a string
+            return ",".join(args_arrstr)
+
+        print("unknwon data type {} in make_string".format(type(args)))
+        return None
+
     def round_unit(self, v, unit):
         if unit is None:
             return v
@@ -91,6 +112,7 @@ class env:
         return unit * d
 
     def round_pose(self, pose):
+        pose = self.make_string(pose)
         i = 0
         s = ""
         unit = self.pos_unit
@@ -168,6 +190,18 @@ class env:
         r = self.do("reset")
         self.extract_response(r.json())
 
+    def clear_tray(self):
+        r = self.do("clear_tray")
+        self.extract_response(r.json())
+
+    def set_finger(self, args):
+        r = self.do("set_finger", args)
+        self.extract_response(r.json())
+
+    def set_target(self, args):
+        r = self.do("set_target", args)
+        self.extract_response(r.json())
+
     def move_finger(self, inc_pose):
         inc_pose = self.round_pose(inc_pose)
         r = self.do("move_finger", str(inc_pose))
@@ -185,54 +219,6 @@ class env:
     def get_json_objectinfo(self, args):
         r = self.do("get_json_objectinfo")
         return r.json()
-
-    def set_json_params(self, args):
-        r = self.do("set_json_params", args)
-
-    def reset_json_objectinfo(self, args):
-        r = self.do("reset_json_objectinfo", args)
-        self.extract_response(r.json())
-
-    def json_vector3(self, vec3):
-        new_v = dict()
-        new_v['x'] = float(vec3[0])
-        new_v['y'] = float(vec3[1])
-        new_v['z'] = float(vec3[2])
-        return new_v
-
-    def json_quaternion(self, q):
-        new_q = dict()
-        new_q['x'] = float(q[0])
-        new_q['y'] = float(q[1])
-        new_q['z'] = float(q[2])
-        new_q['w'] = float(q[3])
-        return new_q
-
-    def json_transform(self, position, rotation, localScale):
-        new_t = dict()
-        new_t['postion'] = self.json_vector3(position)
-        new_t['rotation'] = self.json_quaternion(rotation)
-        new_t['localScale'] = self.json_vector3(localScale)
-        return new_t
-
-    def quaternion_id(self):
-        return [0, 0, 0, 1]
-
-    def json_objectinfo(self,
-                          finger_size,
-                          finger_position,
-                          target_size,
-                          target_position,
-                          camera_position,
-                          camera_rotation):
-        q_id = self.quaternion_id()
-        j = dict()
-        j['ObjList'] = list()
-        j['finger'] = self.json_transform(finger_position, q_id, [finger_size, finger_size, finger_size])
-        j['target'] = self.json_transform(target_position, q_id, [target_size, target_size, target_size])
-        j['main_camera'] = self.json_transform(camera_position, camera_rotation, [1, 1, 1])
-
-        return j
 
     def extract_cam(self, data, key):
         if key in data:
@@ -338,15 +324,16 @@ def env_test(argv):
                 var_dict[args] = json_value
             print(json.dumps(json_value))
 
-        def do_set_json_params(self, args):
-            js = json.dumps(var_dict[args]) if args in var_dict else args
-            print(js)
-            x.set_json_params(js)
+        def do_set_finger(self, args):
+            x.set_finger(args)
+            d.show(x)
 
-        def do_reset_json_objectinfo(self, args):
-            js = json.dumps(var_dict[args]) if args in var_dict else args
-            print(js)
-            x.reset_json_objectinfo(js)
+        def do_set_target(self, args):
+            x.set_target(args)
+            d.show(x)
+
+        def do_clear_tray(self):
+            x.clear_tray()
             d.show(x)
 
         def do_move_finger(self, args):
