@@ -92,6 +92,24 @@ class DistworldEnv(gym.Env):
 
         return a
 
+    def expert_action(self):
+        dist = abs(self.finger_pos - self.target_pos)
+        n = 0
+        for i in range(self.dims):
+            n *= 3
+            if abs(dist[i] >= self.reach_minimum):
+                if self.single_dim_action:
+                    if dist[i] > 0:
+                        return 1 + i * 2
+                    else:
+                        return 2 + i * 2
+                else:
+                    if dist[i] < 0:
+                        n += 1
+                    else:
+                        n += 2
+        return n
+
     def target_reached(self):
         dist = abs(self.finger_pos - self.target_pos)
         return (dist > self.reach_minimum).sum() == 0

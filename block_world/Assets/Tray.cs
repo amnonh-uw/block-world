@@ -153,7 +153,9 @@ public class ObjectInfo
 
 	public  ObjectInfo(GameObject go) {
 		FromWorldTransform (go.transform);
-		color = go.GetComponent<Renderer> ().material.color;
+		Renderer r = go.GetComponent<Renderer> ();
+		if(r != null)
+			color = r.material.color;
 	}
 
 	public void SetObject(GameObject go) {
@@ -182,7 +184,11 @@ public class ObjectInfo
 			def_position = go.transform.position;
 			def_rotation = go.transform.rotation;
 			def_localScale = go.transform.localScale;
-			def_color = go.GetComponent<Renderer> ().material.color;
+			Renderer r = go.GetComponent<Renderer> ();
+			if (r != null)
+				def_color = r.material.color;
+			else
+				def_color = Color.blue;
 		}
 
 		ElementSplitter es = new ElementSplitter (s);

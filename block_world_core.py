@@ -71,8 +71,7 @@ class env:
                     return None
                 sleep(0.1)
             except requests.exceptions.Timeout:
-                print("Timeout on request!!!")
-                return None
+                print("Timeout on request!!! - retry")
 
         if r.status_code != 200:
             print('Status:', r.status_code, 'Problem with the request. Exiting.')
@@ -216,7 +215,7 @@ class env:
         r = self.do("get_json_params")
         return r.json()
 
-    def get_json_objectinfo(self, args):
+    def get_json_objectinfo(self):
         r = self.do("get_json_objectinfo")
         return r.json()
 
@@ -261,6 +260,19 @@ class env:
         s = s.replace(")", "")
 
         return s.split(delim)
+
+    def expert_action(self):
+        dist = abs(self.finger_pos - self.target_pos)
+        n = 0
+        for i in range(3):
+            n *= 3
+            if abs(dist[i] >= self.reach_minimum):
+                if dist[i] < 0:
+                    n += 1
+                else:
+                    n += 2
+        return n
+
 
 def env_test(argv):
     parser = argparse.ArgumentParser(description='block_world')
@@ -319,7 +331,7 @@ def env_test(argv):
             print(json.dumps(json_value))
 
         def do_get_json_objectinfo(self, args):
-            json_value = x.get_json_objectinfo(args)
+            json_value = x.get_json_objectinfo()
             if args:
                 var_dict[args] = json_value
             print(json.dumps(json_value))
