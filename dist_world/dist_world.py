@@ -7,6 +7,10 @@ from multi_discrete_and_gaussian import MultiDiscreteAndGaussian
 import numpy as np
 import math
 
+class envspec:
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
 class DistworldEnv(gym.Env):
     def __init__(self,
                  span=10,
@@ -19,6 +23,8 @@ class DistworldEnv(gym.Env):
                  reach_minimum = 0.1,
                  max_far=None,
                  no_stops = False):
+
+        self._spec = envspec(timestep_limit=30)
         self.metadata = {'render.modes': ['human', '']}
 
         if greedy and column_greedy:

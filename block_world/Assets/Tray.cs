@@ -258,10 +258,14 @@ public class Tray : MonoBehaviour
 	public List<GameObject> ObjList = new List<GameObject>();
 	public GameObject finger;
 	public GameObject target;
-	public GameObject cam1_controller;
-	public Camera cam1;
-	public GameObject cam2_controller;
-	public Camera cam2;
+	public GameObject leftcam_controller;
+	public Camera leftcam;
+	public GameObject rightcam_controller;
+	public Camera rightcam;
+	public GameObject centercam_controller;
+	public Camera centercam;
+	public GameObject depthcam_controller;
+	public Camera depthcam;
 
 	public GameObject tray;
 	public GameObject rim1;
@@ -691,10 +695,19 @@ public class Tray : MonoBehaviour
 
 	void CreateCameras()
 	{
-		cam1_controller = CreateCamera ("Left Camera", -p.StereoDistance / 2f);
-		cam1 = cam1_controller.GetComponent<Camera> ();
-		cam2_controller = CreateCamera ("Right Camera", p.StereoDistance / 2f);
-		cam2 = cam2_controller.GetComponent<Camera> ();
+		leftcam_controller = CreateCamera ("Left Camera", -p.StereoDistance / 2f);
+		leftcam = leftcam_controller.GetComponent<Camera> ();
+		rightcam_controller = CreateCamera ("Right Camera", p.StereoDistance / 2f);
+		rightcam = rightcam_controller.GetComponent<Camera> ();
+		centercam_controller = CreateCamera ("Center Camera", 0f);
+		centercam = centercam_controller.GetComponent<Camera> ();
+		depthcam_controller = CreateCamera ("Center Depth Camera", 0f);
+		depthcam = depthcam_controller.GetComponent<Camera> ();
+		RenderDepth RenderScript = depthcam_controller.AddComponent<RenderDepth> ();
+		if (RenderScript == null) {
+			Debug.Log ("failed to add RenderDepth script to depth cam");
+		}
+		RenderScript.Setup ();
 	}
 
 
@@ -887,8 +900,10 @@ public class Tray : MonoBehaviour
     [System.Serializable]
     public class Response
     {
-        public byte[] cam1;
-        public byte[] cam2;
+        public byte[] leftcam;
+        public byte[] rightcam;
+		public byte[] centercam;
+		public byte[] depthcam;
         public Vector3 finger_pos;
 		public Vector3 finger_rot;
         public Vector3 target_pos;
@@ -930,8 +945,10 @@ public class Tray : MonoBehaviour
             takeCameraShot = false;
 
             Response r = new Response();
-			r.cam1 = ScreenShot (cam1);
-			r.cam2 = ScreenShot (cam2);
+			r.leftcam = ScreenShot (leftcam);
+			r.rightcam = ScreenShot (rightcam);
+			r.centercam = ScreenShot (centercam);
+			r.depthcam = ScreenShot (depthcam);
 			r.finger_pos = finger.transform.position;
 			r.finger_rot = finger.transform.rotation.eulerAngles;
 			r.target_pos = target.transform.position;

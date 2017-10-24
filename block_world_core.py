@@ -224,6 +224,7 @@ class env:
             cam_stream = io.BytesIO(bytearray(data[key]))
             return Image.open(cam_stream)
         else:
+            print("can't find cam {}".format(key))
             return None
 
     def extract_float(self, data, key):
@@ -246,8 +247,10 @@ class env:
         return(data[key])
 
     def extract_response(self, data):
-        self.cam1 = self.extract_cam(data, "cam1")
-        self.cam2 = self.extract_cam(data, "cam2")
+        self.leftcam = self.extract_cam(data, "leftcam")
+        self.rightcam = self.extract_cam(data, "rightcam")
+        self.centercam = self.extract_cam(data, "centercam")
+        self.depthcam = self.extract_cam(data, "depthcam")
         self.target_pos = self.extract_vector3(data, "target_pos")
         self.finger_pos = self.extract_vector3(data, "finger_pos")
         self.target_rot = self.extract_vector3(data, "target_rot")
@@ -260,6 +263,16 @@ class env:
         s = s.replace(")", "")
 
         return s.split(delim)
+
+    def get_depth(self):
+        import cv2
+        stereo = cv2.StereoBM(1, 16, 15)
+        disparity = stereo.compute(self.leftcam, self.rightcam)
+
+        return disparity
+
+    def get_observation(self):
+        return np.concatenate((self.leftcam, self.rightcam), axis=2)
 
     def expert_action(self):
         dist = abs(self.finger_pos - self.target_pos)
@@ -381,33 +394,25 @@ def env_test(argv):
     prompt.prompt = '>>> '
     prompt.cmdloop()
 
+import cv2
+import PIL
 class _display:
     def __init__(self, show_obs=True):
         self.show_obs = show_obs
         self.first = True
 
-        if self.show_obs:
-            f, (self.ax1, self.ax2, self.ax3) = plt.subplots(3)
-            plt.ion()
-            self.ax1 = plt.subplot2grid((2, 2), (0, 0))
-            self.ax2 = plt.subplot2grid((2, 2), (0, 1))
-            self.ax3 = plt.subplot2grid((2, 2), (1, 0), colspan=2)
-            self.ax1.axis('off')
-            self.ax2.axis('off')
-            self.ax3.axis('off')
+    def show_image(self, cam):
+        cam.show()
 
     def show(self, env):
         if self.show_obs:
             if env.collision:
                 print("BOOM")
-            self.ax1.imshow(env.cam1)
-            self.ax2.imshow(env.cam2)
-            if env.collision:
-                self.ax3.text(0.5, 0.5, 'BOOM', horizontalalignment='center', verticalalignment='center')
-            plt.draw()
+            self.show_image(env.centercam)
+            self.show_image(env.depthcam)
+
             if self.first:
                 self.first = False
-                plt.show()
 
 if __name__ == "__main__":
     env_test(sys.argv[1:])
