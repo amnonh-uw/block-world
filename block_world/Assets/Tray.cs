@@ -707,7 +707,6 @@ public class Tray : MonoBehaviour
 		if (RenderScript == null) {
 			Debug.Log ("failed to add RenderDepth script to depth cam");
 		}
-		RenderScript.Setup ();
 	}
 
 
@@ -781,6 +780,8 @@ public class Tray : MonoBehaviour
 					CommandCounter += 1;
 					if (CommandCounter % 100 == 0)
 						Debug.LogFormat ("Total Memory use {0}", System.GC.GetTotalMemory (true));
+
+					// Debug.LogFormat ("listenerAction {0}", listenerAction);
 
 					if (listenerAction == "clear_tray")
 					{
@@ -873,7 +874,7 @@ public class Tray : MonoBehaviour
 						listenerAction = null;
 					}
 
-					if (listenerAction != null && !lookForAction) {
+					if (listenerAction != null && listenerAction != "" && !lookForAction) {
 						Debug.LogFormat ("Unknown commmand {0}", listenerAction);
 						NoResponse ();
 						listenerArgs = null;
@@ -913,6 +914,7 @@ public class Tray : MonoBehaviour
 
  	byte[] ScreenShot(Camera cam)
 	{
+		cam.gameObject.SetActive (true);
 		RenderTexture currentRT = RenderTexture.active;
 		RenderTexture.active = cam.targetTexture;
 		cam.Render();
@@ -924,6 +926,7 @@ public class Tray : MonoBehaviour
 
 		byte[] buff = image.EncodeToPNG();
 		Destroy (image);
+		cam.gameObject.SetActive (false);
 		return(buff);
 	}
 

@@ -3,18 +3,7 @@ import argparse
 import tensorflow as tf
 from dist_world import DistworldEnv as make
 from dagger import Dagger
-
-def policy(x, act_shape):
-    if len(act_shape) == 0:
-            act_dim = 1
-    else:
-        act_dim = act_shape[0]
-    h1 = tf.layers.dense(inputs=x, units=128, activation=tf.nn.relu)
-    h2 = tf.layers.dense(inputs=h1, units=64, activation=tf.nn.relu)
-    h3 = tf.layers.dense(inputs=h2, units=32, activation=tf.nn.relu)
-    yhat = tf.layers.dense(inputs=h3, units=act_dim, activation=None)
-
-    return yhat
+from dagger_policy import policy
 
 def main(argv):
     parser = argparse.ArgumentParser(description='block_world')
@@ -55,9 +44,13 @@ def main(argv):
                reach_minimum=cmd_args.reach_minimum,
                max_far=cmd_args.max_far)
 
-    dagger = Dagger(env)
-    dagger.learn(policy)
+    dagger = Dagger(env,
+        num_rollouts = 25,
+        train_batch_size = 25,
+        train_iterations = 10000,
+        iterations = 20)
 
+    dagger.learn(policy, "dagger_dist_world")
     env.close()
 
 if __name__ == '__main__':
