@@ -23,8 +23,8 @@ class Dagger:
         self.save_train_size = []
 
     def learn(self, policy_class, fname):
-        self.expert_step()
         self.build_graph(policy_class)
+        self.expert_step()
 
         # record return and std for plotting
         self.save_mean = []

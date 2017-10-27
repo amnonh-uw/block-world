@@ -12,7 +12,11 @@ class DaggerPolicy:
         img1, _, img2, _ = tf.split(x, [3, 1, 3, 1], axis=3)
         inputs = {'img1': img1, 'img2': img2}
         self.base_network = vgg16_siamese(inputs)
-        self.logits = tf.layers.dense(inputs=self.base_network.get_output("fc9"), units=num_actions, activation=None, name='logits')
+        self.logits = tf.layers.dense(inputs=self.base_network.get_output("dagger_fc9"), units=num_actions, activation=None, name='logits')
+
+        # load, just for kicks
+        with tf.Session():
+            self.policy_initializer()
 
     def get_output(self):
         return tf.argmax(self.logits, axis=1)
@@ -22,7 +26,7 @@ class DaggerPolicy:
         return tf.contrib.losses.softmax_cross_entropy(self.logits, onehot_labels)
 
     def policy_initializer(self):
-        base_network.load('vgg16.npy', tf.get_default_session())
+        self.base_network.load('vgg16.npy', tf.get_default_session(), ignore_missing=True)
         pass
 
 
@@ -83,5 +87,5 @@ class vgg16_siamese(Network):
           # combine towers
         (self.feed('fc7', 'fc7_p')
          .concat(1, name='combined_fc7')
-         .fc(1024, name="fc8")
-         .fc(1024, name="fc9"))
+         .fc(1024, name="dagger_fc8")
+         .fc(1024, name="dagger_fc9"))
