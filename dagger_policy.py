@@ -22,6 +22,7 @@ class DaggerPolicy:
         return tf.contrib.losses.softmax_cross_entropy(self.logits, onehot_labels)
 
     def policy_initializer(self):
+        base_network.load('vgg16.npy', tf.get_default_session())
         pass
 
 

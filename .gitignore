@@ -11,5 +11,9 @@ __pycache__
 *.idx
 Dockerfile
 baselines/*
-block_world/*
+block_world/Library
+Assets
+block_world/ProjectSettings
+block_world/Temp
+block_world/obj
 builds/*
