@@ -15,7 +15,7 @@ import json
 class env:
     last_port = 9000
 
-    def __init__(self, log="/dev/stdout", pos_unit=None, rot_unit=None,run = True, verbose=False):
+    def __init__(self, log="/dev/stdout", pos_unit=None, rot_unit=None,run = True, verbose=False, params_args=None):
         self.port = env.last_port
         self.uri = "http://localhost:" + str(self.port) + "/"
         env.last_port += 1
@@ -24,9 +24,14 @@ class env:
         self.log = log
         self.verbose = verbose
 
+        print(self.log)
+
         self.first_connection = True
         if run:
             self.run()
+
+        if params_args != None:
+            self.set_params(**params_args)
 
     def run(self):
         from inspect import getfile
@@ -130,59 +135,9 @@ class env:
     def close(self):
         self.do("quit")
 
-    def set_params(self, tray_length = None,
-                         tray_width = None,
-                         tray_height = None,
-                         rim_height = None,
-                         rim_width = None,
-                         obj_min_size = None,
-                         obj_max_size = None,
-                         max_objects = None,
-                         finger_size = None,
-                         finger_max_height = None,
-                         finger_distance_from_tray = None,
-                         target_size = None,
-                         stereo_distance = None):
-
-        tray_length = self.round_unit(tray_length, self.pos_unit)
-        tray_width = self.round_unit(tray_width, self.pos_unit)
-        tray_height = self.round_unit(tray_height, self.pos_unit)
-        rim_height = self.round_unit(rim_height, self.pos_unit)
-        rim_width = self.round_unit(rim_width, self.pos_unit)
-        obj_min_size = self.round_unit(obj_min_size, self.pos_unit)
-        obj_max_size = self.round_unit(obj_max_size, self.pos_unit)
-        finger_size = self.round_unit(finger_size, self.pos_unit)
-        finger_max_height = self.round_unit(finger_max_height, self.pos_unit)
-        finger_distance_from_tray = self.round_unit(finger_distance_from_tray, self.pos_unit)
-        target_size = self.round_unit(target_size, self.pos_unit)
-        stereo_distance = self.round_unit(stereo_distance, self.pos_unit)
-
-        if tray_length is not None:
-            self.do("tray_length", str(tray_length))
-        if tray_width is not None:
-            self.do("tray_width", str(tray_width))
-        if tray_height is not None:
-            self.do("tray_height", str(tray_height))
-        if rim_height is not None:
-            self.do("rim_height", str(rim_height))
-        if rim_width is not None:
-            self.do("rim_width", str(rim_height))
-        if obj_min_size is not None:
-            self.do("obj_min_size", str(obj_min_size))
-        if obj_max_size is not None:
-            self.do("obj_max_size", str(obj_max_size))
-        if max_objects is not None:
-            self.do("max_objects", str(max_objects))
-        if finger_size is not None:
-            self.do("finger_size", str(finger_size))
-        if finger_max_height is not None:
-            self.do("finger_max_height", str(finger_max_height))
-        if finger_distance_from_tray is not None:
-            self.do("finger_distance_from_tray", str(finger_distance_from_tray))
-        if target_size is not None:
-            self.do("target_size", str(target_size))
-        if stereo_distance is not None:
-            self.do("stereo_distance", str(stereo_distance))
+    def set_params(self, **kwargs):
+        for key in kwargs:
+            self.do(key, str(kwargs[key]))
 
     def reset(self, **kwargs):
         self.set_params(**kwargs)
@@ -251,6 +206,7 @@ class env:
         self.rightcam = self.extract_cam(data, "rightcam")
         self.centercam = self.extract_cam(data, "centercam")
         self.depthcam = self.extract_cam(data, "depthcam")
+        self.highprecision  = self.extract_bool(data, "highprecision")
         self.target_pos = self.extract_vector3(data, "target_pos")
         self.finger_pos = self.extract_vector3(data, "finger_pos")
         self.target_rot = self.extract_vector3(data, "target_rot")
@@ -304,6 +260,7 @@ def env_test(argv):
     parser.set_defaults(run=True)
     cmd_args = parser.parse_args(argv)
 
+
     if cmd_args.no_units:
         cmd_args.pos_unit = None
         cmd_args.rot_unit = None
@@ -334,7 +291,7 @@ def env_test(argv):
             if args:
                 x.reset(max_objects=int(args))
             else:
-                x.reset(tray_length=3.0, tray_width=2.0, stereo_distance=0.5, max_objects=20)
+                x.reset(tray_length=3.0, tray_width=2.0)
             d.show(x)
 
         def do_get_json_params(self, args):
@@ -396,23 +353,89 @@ def env_test(argv):
 
 import cv2
 import PIL
+from vtk_visualizer import plotxyzrgb
 class _display:
     def __init__(self, show_obs=True):
         self.show_obs = show_obs
         self.first = True
 
-    def show_image(self, cam):
-        cam.show()
+        cv2.startWindowThread()
+        cv2.namedWindow("center cam", cv2.WINDOW_AUTOSIZE)
+        cv2.namedWindow("left cam", cv2.WINDOW_AUTOSIZE)
+        cv2.namedWindow("right cam", cv2.WINDOW_AUTOSIZE)
+        cv2.namedWindow("depth cam", cv2.WINDOW_AUTOSIZE)
 
     def show(self, env):
         if self.show_obs:
             if env.collision:
                 print("BOOM")
-            self.show_image(env.centercam)
-            self.show_image(env.depthcam)
 
-            if self.first:
-                self.first = False
+            centercam = cv2.cvtColor(np.array(env.centercam), cv2.COLOR_RGB2BGR)
+            leftcam = cv2.cvtColor(np.array(env.leftcam), cv2.COLOR_RGB2BGR)
+            rightcam = cv2.cvtColor(np.array(env.rightcam), cv2.COLOR_RGB2BGR)
+
+
+            cv2.imshow("center cam", centercam)
+            cv2.imshow("left cam", leftcam)
+            cv2.imshow("right cam", rightcam)
+
+            # if env.highprecision:
+            #     f = self.rgba_img_to_float(env.depthcam)
+            #     m = np.amax(f)
+            #     print("max value is {}", m)
+            #     f[f > m - 0.01] = 0
+            #     m = np.amax(f)
+            #     g = f * 255 / m
+            #     g = g.astype(np.int8)
+            #     cv2.imshow("depth cam", g)
+            #     self.show_pointcloud(env.centercam, f)
+            # else:
+            #     pass
+            #     leftcam_grayscale = np.array(env.leftcam.convert("L"))
+            #     rightcam_grayscale = np.array(env.rightcam.convert("L"))
+            #     cv2.imshow("left grayscale", leftcam_grayscale)
+            #     cv2.imshow("right grayscale", rightcam_grayscale)
+            #     stereo = cv2.StereoBM_create(numDisparities=16, blockSize=15)
+            #     depthcam = stereo.compute(leftcam_grayscale, rightcam_grayscale)
+            #     cv2.imshow("depth cam", depthcam)
+            #
+            # cv2.waitKey(0)
+
+    def show_image(self, cam):
+        cam.show()
+
+    def rgba_img_to_float(self, img):
+        kdecodedot = np.array([1.0, 1.0 / 255.0, 1.0 / 65025.0, 1.0 / 16581375.0], dtype=float);
+
+        a = np.array(img).astype(float)
+        g = np.tensordot(a, kdecodedot, axes=([2], [0]))
+        g = g / 255
+
+        return g
+
+    def show_pointcloud(self, cam, depth):
+        cam = np.array(cam)
+        depth = np.array(depth)
+
+        print("cam shape {}".format(cam.shape))
+        print("depth shape {}".format(depth.shape))
+
+        rows = cam.shape[0]
+        cols = cam.shape[1]
+
+        xyzrgb = np.empty([rows * cols, 6])
+        i = 0
+
+        for index in np.ndindex(rows, cols):
+            xyzrgb[i, 0] = float(index[0]) / rows
+            xyzrgb[i, 1] = float(index[1]) / cols
+            xyzrgb[i, 2] = depth[index]
+            xyzrgb[i, 3] = cam[index[0], index[1], 0]
+            xyzrgb[i, 4] = cam[index[0], index[1], 1]
+            xyzrgb[i, 5] = cam[index[0], index[1], 2]
+            i += 1
+
+        plotxyzrgb(xyzrgb)
 
 if __name__ == "__main__":
     env_test(sys.argv[1:])

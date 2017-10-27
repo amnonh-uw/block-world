@@ -6,6 +6,7 @@ using System.Text;
 using System.Collections.Generic;
 using UnityEngine.Assertions;
 using UnityEngine;
+using Utilities;
 
 [System.Serializable]
 public class Params 
@@ -16,14 +17,17 @@ public class Params
 	public float RimHeight = 0.1f;
 	public float RimWidth = 0.01f;
 	public int MaxObjects = 5;
-	public float ObjMinSize = 0.05f;
-	public float ObjMaxSize = 0.2f;
+	public float ObjMinSize = 0.15f;
+	public float ObjMaxSize = 0.3f;
 	public float velEpsilon = 0.15f;
-	public float fingerDistFromTray = 0.2f;
-	public float fingerMaxHeight = 0.2f;
+	public float fingerDistFromTray = 0.0f;
+	public float fingerMaxHeight = 0.8f;
 	public float fingerSize = 0.05f;
 	public float TargetSize = 0.05f;
 	public float StereoDistance = 0.1f;
+
+	public int cameraWidth = 224;
+	public int cameraHeight = 224;
 
 	bool Nonzero(float f) {
 		return f < -velEpsilon || f > velEpsilon;
@@ -37,6 +41,14 @@ public class Params
 	{
 		switch (name) 
 		{
+		case "width":
+			cameraWidth = System.Convert.ToInt32 (value);
+			return true;
+
+		case "height":
+			cameraHeight = System.Convert.ToInt32 (value);
+			return true;
+
 		case "tray_length":
 			TrayLength = System.Convert.ToSingle (value);
 			return true;
@@ -258,6 +270,7 @@ public class Tray : MonoBehaviour
 	public List<GameObject> ObjList = new List<GameObject>();
 	public GameObject finger;
 	public GameObject target;
+
 	public GameObject leftcam_controller;
 	public Camera leftcam;
 	public GameObject rightcam_controller;
@@ -307,9 +320,21 @@ public class Tray : MonoBehaviour
 
 	int CommandCounter;
 
+	ColorGenerator colorGenerator;
+
     // Use this for initialization
     void Start()
     {
+		//
+		// Make main camera show depth!
+		//
+		RenderDepth RenderScript = Camera.main.gameObject.AddComponent<RenderDepth> ();
+		if (RenderScript == null) {
+			Debug.Log ("failed to add RenderDepth script to main cam");
+		}
+		RenderScript.DepthOn = false;
+
+		colorGenerator = new ColorGenerator ();
 		p = new Params () ;
 		CreateCameras ();
 		finger = null;
@@ -372,7 +397,7 @@ public class Tray : MonoBehaviour
 
 							if (name == "args") {
 								// Debug.LogFormat ("Listener args <{0}>", value);
-						listenerArgs = value;
+								listenerArgs = value;
 							}
                         }
                     }
@@ -528,6 +553,12 @@ public class Tray : MonoBehaviour
         rim4.name = "Rim4";
     }
 
+	void PositionMainCamera(GameObject finger)
+	{
+		Camera.main.transform.position = new Vector3 (0f, 2f, finger.transform.position.z * 2f);
+		Camera.main.transform.eulerAngles = new Vector3 (45f, 0f, 0f);
+	}
+
 	void AddObject(ObjectInfo info)
 	{
 		GameObject new_object = CreateObject ();
@@ -547,6 +578,7 @@ public class Tray : MonoBehaviour
 
 		return obj;
 	}
+		
 
 	GameObject CreateRandomObject() 
 	{
@@ -555,8 +587,8 @@ public class Tray : MonoBehaviour
 		Material mat = Object.Instantiate(ObjBaseMat);
 		Renderer r = obj.GetComponent<Renderer> ();
 		r.material = mat;
-		r.material.color = Random.ColorHSV(0.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f);
-
+		r.material.color = colorGenerator.RandomColor ();
+		
 		return obj;	
 	}
 
@@ -592,6 +624,7 @@ public class Tray : MonoBehaviour
 			finger = CreateFinger ();
 
 		info.SetObjectTransform (finger);
+		PositionMainCamera (finger);
 	}
 
 	GameObject CreateFinger()
@@ -615,14 +648,19 @@ public class Tray : MonoBehaviour
 		float yPos = Random.Range (yMin, yMax);
 		fing.transform.position = new Vector3(xPos, yPos, zPos);
 
+		PositionMainCamera (fing);
+
 		return fing;
 	}
 
 	GameObject CreateRandomFinger(float trayDistance, float fingerSize)
 	{
-		return(CreateRandomFinger (MinDropLength,MaxDropLength,
-			p.TrayHeight + p.RimHeight, p.TrayHeight + p.RimHeight + p.fingerMaxHeight,
-			-0.5f * p.TrayWidth + trayDistance, fingerSize));
+		return(CreateRandomFinger (MinDropLength,
+								   MaxDropLength,
+								   p.TrayHeight + p.RimHeight,
+			                       p.TrayHeight + p.RimHeight + p.fingerMaxHeight,
+								   -0.5f * p.TrayWidth - trayDistance,
+								   fingerSize));
 	}
 
 	void SetTarget(ObjectInfo info)
@@ -686,10 +724,12 @@ public class Tray : MonoBehaviour
 		GameObject cam_controller = new GameObject (name);
 		cam = cam_controller.AddComponent<Camera> ();
 		cam_controller.transform.parent = Camera.main.gameObject.transform;
+		cam_controller.transform.localEulerAngles = Vector3.zero;
 		cam_controller.transform.localPosition = new Vector3 (distance, 0f, 0f);
 		cam_controller.SetActive (false);
-		cam.targetTexture = new RenderTexture(cam.pixelWidth, cam.pixelWidth, 24);
-
+		cam.targetTexture = new RenderTexture(p.cameraWidth, p.cameraHeight, 24);
+		cam.transform.localEulerAngles = Vector3.zero;
+	
 		return cam_controller;
 	}
 
@@ -782,6 +822,10 @@ public class Tray : MonoBehaviour
 						Debug.LogFormat ("Total Memory use {0}", System.GC.GetTotalMemory (true));
 
 					// Debug.LogFormat ("listenerAction {0}", listenerAction);
+					// if (listenerArgs != null)
+					// 	Debug.LogFormat ("listenerArgs {0}", listenerArgs);
+					// else
+					//	Debug.Log ("no args");
 
 					if (listenerAction == "clear_tray")
 					{
@@ -905,6 +949,7 @@ public class Tray : MonoBehaviour
         public byte[] rightcam;
 		public byte[] centercam;
 		public byte[] depthcam;
+		public bool highprecision;
         public Vector3 finger_pos;
 		public Vector3 finger_rot;
         public Vector3 target_pos;
@@ -952,6 +997,8 @@ public class Tray : MonoBehaviour
 			r.rightcam = ScreenShot (rightcam);
 			r.centercam = ScreenShot (centercam);
 			r.depthcam = ScreenShot (depthcam);
+			RenderDepth rd = depthcam.gameObject.GetComponent<RenderDepth>();
+			r.highprecision = rd.highPrecisionDepth;
 			r.finger_pos = finger.transform.position;
 			r.finger_rot = finger.transform.rotation.eulerAngles;
 			r.target_pos = target.transform.position;

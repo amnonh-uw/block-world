@@ -15,88 +15,53 @@ class DistworldEnv(gym.Env):
     def __init__(self,
                  span=10,
                  dims = 3,
-                 single_dim_action = False,
                  greedy=False,
-                 column_greedy=False,
                  l2_penalty=None,
                  continous_actions=None,
-                 reach_minimum = 0.1,
-                 max_far=None,
-                 no_stops = False):
+                 reach_minimum = 0.1):
 
         self._spec = envspec(timestep_limit=30)
         self.metadata = {'render.modes': ['human', '']}
 
-        if greedy and column_greedy:
-            raise ValueError('either greedy or column greedy but not both')
-
-        if single_dim_action:
-            if continous_actions:
-                #
-                # Discrete scalar to choose stop or select dimension to move in
-                # Continous scalar for movement value
-                #
-                self.action_space = MultiDiscreteAndGaussian([0,dims], 1)
-            else:
-                #
-                # Discrete vector up, down or nop for each dimension
-                #
-                self.action_space = MultiDiscrete([[0, dims * 2]])
+        if continous_actions:
+            #
+            # Boolean to choose stop or continue to move
+            # Continous vector for movement value
+            #
+            self.action_space = MultiDiscreteAndGaussian([0, 1], dims)
         else:
-            if continous_actions:
-                #
-                # Boolean to choose stop or continue to move
-                # Continous vector for movement value
-                #
-                self.action_space = MultiDiscreteAndGaussian([0, 1], dims)
-            else:
-                #
-                # Discrete scalar for up, down, or nop for each dimensoin
-                #
-                act = list()
-                for _ in range(dims): act += [[-1, 1]]
-                self.action_space = MultiDiscrete(act)
+            #
+            # Discrete scalar for up, down, or nop for each dimensoin
+            #
+            act = list()
+            for _ in range(dims): act += [[-1, 1]]
+            self.action_space = MultiDiscrete(act)
 
         self.observation_space = MultiContinuous(2 * dims)
         self.span = span
         self.dims = dims
-        self.single_dim_action = single_dim_action
         self.greedy = greedy
-        self.column_greedy = column_greedy
-        self.max_far = max_far
         self.continous_actions = continous_actions
         self.reach_minimum = reach_minimum
         self.l2_penalty = l2_penalty
-        self.no_stops = no_stops
         self._seed()
 
         self.reset_counter = 0
         self.step_counter = 0
 
     def map_discrete_action(self, n):
-        if self.single_dim_action:
-            n -= 1              # zero would have meant episode end
-            act_dim = n // 2
-            n = n % 2
-            a = np.zeros([self.dims])
-            if n == 0:
-                a[act_dim] = 1
-            else:
-                a[act_dim] = -1
-        else:
-            a = list()
-            for _ in range(self.dims):
-                k = n % 3
-                n = n // 3
-                if k == 0:
-                    a += [0]
-                if k == 1:
-                    a += [1]
-                if k == 2:
-                    a += [-1]
-            a = np.array(a)
+        a = list()
+        for _ in range(self.dims):
+            k = n % 3
+            n = n // 3
+            if k == 0:
+                a += [0]
+            if k == 1:
+                a += [1]
+            if k == 2:
+                a += [-1]
 
-        return a
+        return np.array(a)
 
     def expert_action(self):
         dist = self.target_pos - self.finger_pos
@@ -105,16 +70,10 @@ class DistworldEnv(gym.Env):
 
         for i in range(self.dims):
             if abs(dist[i]) >= self.reach_minimum:
-                if self.single_dim_action:
-                    if dist[i] > 0:
-                        return 1 + i * 2
-                    else:
-                        return 2 + i * 2
+                if dist[i] > 0:
+                    act += 1 * n
                 else:
-                    if dist[i] > 0:
-                        act += 1 * n
-                    else:
-                        act += 2 * n
+                    act += 2 * n
             n *= 3
 
         return act
@@ -132,8 +91,7 @@ class DistworldEnv(gym.Env):
     def calc_intermediate_reward(self, old_pos):
         if (abs(self.finger_pos) > self.span).sum() != 0:
             # stepped outside of allowed ranges
-            if not self.no_stops:
-                self.episode_ended = True
+            self.episode_ended = True
             return -1000
 
         old_dist = abs(old_pos - self.target_pos)
@@ -143,12 +101,6 @@ class DistworldEnv(gym.Env):
             if (old_dist < new_dist).sum() != 0:
                 # bad move. We don't want to see regression in any dimension
                 return -100
-
-        if self.column_greedy:
-            num_regressed_dims = (old_dist < new_dist).sum()
-            if num_regressed_dims != 0:
-                # bad move, regressed in num_regressed_dims dimensions
-                return -100 * num_regressed_dims
 
         # Every steps costs
         return -1
@@ -169,8 +121,7 @@ class DistworldEnv(gym.Env):
                 else:
                     reward = -1000
 
-                if not self.no_stops:
-                    self.episode_ended = True
+                self.episode_ended = True
         else:
             if self.continous_actions:
                 inc_pos = self.action_space.to_continous(action)
@@ -197,12 +148,8 @@ class DistworldEnv(gym.Env):
         self.episode_ended = False
 
         def target_range():
-            if self.max_far is not None:
-                low = np.maximum(self.finger_pos - self.max_far, -self.span)
-                high = np.minimum(self.finger_pos + self.max_far, +self.span)
-            else:
-                low = -self.span
-                high = +self.span
+            low = -self.span
+            high = +self.span
 
             return low, high
 

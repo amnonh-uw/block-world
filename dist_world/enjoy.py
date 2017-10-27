@@ -13,20 +13,16 @@ def main(argv):
 
     parser.add_argument('--dims', type=int, default=3)
     parser.add_argument('--span', type=int, default=10)
-    parser.add_argument('--single-dim-action', dest='single_dim_action', action='store_true')
-    parser.add_argument('--no-single-dim-action', dest='single_dim_action', action='store_false')
     parser.add_argument('--episodes', type=int, default=100)
     parser.add_argument('--run', dest='run', action='store_true')
     parser.add_argument('--no-run', dest='run', action='store_false')
 
-    parser.set_defaults(single_dim_action=False, run=True)
     cmd_args = parser.parse_args(argv)
 
     print(cmd_args)
 
     env = make(span=cmd_args.span,
-               dims=cmd_args.dims,
-               single_dim_action=cmd_args.single_dim_action)
+               dims=cmd_args.dims0
     act = deepq.load("distworld_model.pkl")
 
     block_env = make_block_env(run=cmd_args.run)

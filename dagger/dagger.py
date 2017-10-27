@@ -22,9 +22,9 @@ class Dagger:
         self.save_std = []
         self.save_train_size = []
 
-    def learn(self, policy_network, fname):
+    def learn(self, policy_class, fname):
         self.expert_step()
-        self.build_graph(policy_network)
+        self.build_graph(policy_class)
 
         # record return and std for plotting
         self.save_mean = []
@@ -33,6 +33,7 @@ class Dagger:
 
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
+            self.policy.policy_initializer()
 
             for i in range(self.iterations):
                 print("DAgger iteration {}".format(i))
@@ -47,24 +48,25 @@ class Dagger:
         print("DAgger iterations finished!")
         print(dagger_results)
 
-    def test(self, policy_network, fname):
-        self.build_test_graph(policy_network)
+    def test(self, policy_class, fname):
+        self.build_test_graph(policy_class)
         self.load_policy(fname)
 
-    def build_graph(self, policy_network):
-        with tf.variable_scope("policy"):
-            self.x = tf.placeholder(tf.float32, name="x", shape=(None,) + self.obs_shape)
-            self.y = tf.placeholder(tf.int32, name="y", shape=(None,) + self.act_shape)
+    def build_graph(self, policy_class):
+        self.x = tf.placeholder(tf.float32, name="x", shape=(None,) + self.obs_shape)
+        self.y = tf.placeholder(tf.int32, name="y", shape=(None,) + self.act_shape)
 
-            self.yhat, self.loss = policy_network(self.x, self.y, self.num_actions)
+        with tf.variable_scope("policy"):
+            self.policy = policy_class(self.x, self.y, self.num_actions)
+            self.yhat = self.policy.get_output()
+            self.loss = self.policy.get_loss()
             self.train_step_op = tf.train.AdamOptimizer().minimize(self.loss)
 
-    def build_test_graph(self, policy_network):
+    def build_test_graph(self, policy_class):
+        self.x = tf.placeholder(tf.float32, shape=(None,) + self.obs_shape)
         with tf.variable_scope("policy"):
-            self.x = tf.placeholder(tf.float32, shape=(None,) + self.obs_shape)
-            self.y = tf.placeholder(tf.int32, shape=(None,) + self.act_shape)
-
-            self.yhat, _ = policy_network(self.x, self.y, self.num_actions)
+            self.policy = policy_class(self.x, None, self.num_actions)
+            self.yhat  = self.policy.get_output()
 
     def save_policy(self, fname):
         fname += "/"

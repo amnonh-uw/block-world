@@ -28,29 +28,19 @@ def main(argv):
     parser.add_argument('--no-greedy', dest='greedy', action='store_false')
     parser.add_argument('--dims', type=int, default=1)
     parser.add_argument('--span', type=int, default=10)
-    parser.add_argument('--column-greedy', dest='column_greedy', action='store_true')
-    parser.add_argument('--no-column-greedy', dest='column_greedy', action='store_false')
-    parser.add_argument('--single-dim-action', dest='single_dim_action', action='store_true')
-    parser.add_argument('--no-single-dim-action', dest='single_dim_action', action='store_false')
     parser.add_argument('--exploration_fraction', type=float, default=0.1)
     parser.add_argument('--exploration_final_eps', type=float, default=0.01)
     parser.add_argument('--l2-penalty', type=float, default=None)
     parser.add_argument('--continous-actions', dest='continous_actions', action='store_true')
     parser.add_argument('--no-continous-actions', dest='continous_actions', action='store_false')
-    parser.add_argument('--no-stops', dest='no-stops', action='store_true')
-    parser.add_argument('--no-no-stops', dest='no-stops', action='store_false')
     parser.add_argument('--reach-minimum', type=float, default=0.1)
-    parser.add_argument('--max-far', type=float, default=None)
     parser.add_argument('--seed', help='RNG seed', type=int, default=0)
     parser.add_argument('--lrschedule', help='Learning rate schedule', choices=['constant', 'linear'], default='constant')
     parser.add_argument('--million_frames', help='How many frames to train (/ 1e6)', type=int, default=10)
     parser.add_argument('--vf-coef', help='value function coefficient', type=float, default=0.5)
     parser.add_argument('--ent-coef', help='entropy  coefficient', type=float, default=0.01)
     parser.set_defaults(greedy=False)
-    parser.set_defaults(column_greedy=False)
-    parser.set_defaults(single_dim_action=False)
     parser.set_defaults(continous_actions=False)
-    parser.set_defaults(no_stops=False)
     cmd_args = parser.parse_args(argv)
 
     print(cmd_args)
@@ -59,13 +49,10 @@ def main(argv):
         def _thunk():
             env = make(span=cmd_args.span,
                        dims=cmd_args.dims,
-                       single_dim_action=cmd_args.single_dim_action,
                        greedy=cmd_args.greedy,
-                       column_greedy=cmd_args.column_greedy,
                        l2_penalty=cmd_args.l2_penalty,
                        continous_actions=cmd_args.continous_actions,
-                       reach_minimum=cmd_args.reach_minimum,
-                       max_far=cmd_args.max_far)
+                       reach_minimum=cmd_args.reach_minimum)
 
             return env
 
