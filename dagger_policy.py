@@ -14,10 +14,6 @@ class DaggerPolicy:
         self.base_network = vgg16_siamese(inputs)
         self.logits = tf.layers.dense(inputs=self.base_network.get_output("dagger_fc9"), units=num_actions, activation=None, name='logits')
 
-        # load, just for kicks
-        with tf.Session():
-            self.policy_initializer()
-
     def get_output(self):
         return tf.argmax(self.logits, axis=1)
 
