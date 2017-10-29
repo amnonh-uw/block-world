@@ -80,6 +80,7 @@ public class Tray : MonoBehaviour
 
 		colorGenerator = new ColorGenerator ();
 		p = new Params () ;
+		ParametersChanged ();
 		CreateCameras ();
 		finger = null;
 		target = null;
@@ -191,8 +192,20 @@ public class Tray : MonoBehaviour
 		TrackDropping = false;
 		CollisionHappened = false;
     }
+		
+	private void ParametersChanged()
+	{
+		MinDropLength = -0.5f * p.TrayLength + p.RimWidth;
+		MaxDropLength = 0.5f * p.TrayLength - p.RimWidth;
+		MinDropWidth = -0.5f * p.TrayWidth + p.RimWidth;
+		MaxDropWidth = 0.5f * p.TrayWidth - p.RimWidth;
+		DropHeight = p.ObjMaxSize * 4.0f;
 
-	private void InitializeValues () {
+		PositionMainCamera ();
+	}
+
+	private void Initialize()
+	{
 		TrackDropping = false;
 		Ready = false;
 		takeCameraShot = false;
@@ -200,16 +213,6 @@ public class Tray : MonoBehaviour
 		Resetting = false;
 		NumObjects = p.MaxObjects;
 
-		MinDropLength = -0.5f * p.TrayLength + p.RimWidth;
-		MaxDropLength = 0.5f * p.TrayLength - p.RimWidth;
-		MinDropWidth = -0.5f * p.TrayWidth + p.RimWidth;
-		MaxDropWidth = 0.5f * p.TrayWidth - p.RimWidth;
-		DropHeight = p.ObjMaxSize * 4.0f;
-	}
-
-	private void Initialize()
-	{
-		InitializeValues ();
 		CreateTray ();
 		DropNextObject();
 		finger = CreateRandomFinger(p.fingerDistFromTray, p.fingerSize);
@@ -297,9 +300,10 @@ public class Tray : MonoBehaviour
         rim4.name = "Rim4";
     }
 
-	void PositionMainCamera(GameObject finger)
+	void PositionMainCamera()
 	{
-		Camera.main.transform.position = new Vector3 (0f, 2f, finger.transform.position.z * 2f);
+		Debug.LogFormat ("finger dist from tray {0}", p.fingerDistFromTray);
+		Camera.main.transform.position = new Vector3 (0f, 2f, p.fingerDistFromTray - 1.6f);
 		Camera.main.transform.eulerAngles = new Vector3 (45f, 0f, 0f);
 	}
 
@@ -368,7 +372,6 @@ public class Tray : MonoBehaviour
 			finger = CreateFinger ();
 
 		info.SetObjectTransform (finger);
-		PositionMainCamera (finger);
 	}
 
 	GameObject CreateFinger()
@@ -391,8 +394,6 @@ public class Tray : MonoBehaviour
 		float xPos = Random.Range (xMin, xMax);
 		float yPos = Random.Range (yMin, yMax);
 		fing.transform.position = new Vector3(xPos, yPos, zPos);
-
-		PositionMainCamera (fing);
 
 		return fing;
 	}
@@ -634,6 +635,7 @@ public class Tray : MonoBehaviour
 					}
 
 					if (p.Set(listenerAction, listenerArgs)) {
+						ParametersChanged ();
 						NoResponse ();
 						listenerAction = null;
 					}

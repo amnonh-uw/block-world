@@ -83,5 +83,5 @@ class vgg16_siamese(Network):
           # combine towers
         (self.feed('fc7', 'fc7_p')
          .concat(1, name='combined_fc7')
-         .fc(1024, name="dagger_fc8")
-         .fc(1024, name="dagger_fc9"))
+         .fc(256, name="dagger_fc8")
+         .fc(256, name="dagger_fc9"))

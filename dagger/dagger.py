@@ -1,20 +1,23 @@
 import tensorflow as tf
 import numpy as np
 import os
+import h5py
 
 class Dagger:
-    def __init__(self, env, **kwargs):
+    def __init__(self, env, policy_class, **kwargs):
         self.render = True
         self.num_rollouts = 25
         self.train_batch_size = 25
-        self.train_iterations = 10000
+        self.train_epochs = 10
         self.iterations = 50
         self.train_report_frequency = 1000
         self.max_steps = env.spec.timestep_limit
         self.num_actions = env.action_space.n
-        self.__dict__.update(kwargs)
+        self.dir_name = None
 
+        self.__dict__.update(kwargs)
         self.env = env
+        self.policy_class = policy_class
         self.obs_shape = env.observation_space.shape
         self.act_shape = ()
 
@@ -22,8 +25,14 @@ class Dagger:
         self.save_std = []
         self.save_train_size = []
 
-    def learn(self, policy_class, fname):
-        self.build_graph(policy_class)
+        self.samples = []
+
+    def add_sample(self, observation, action):
+        sample = self.policy.save(observation, action)
+        self.samples.append(sample)
+
+    def learn(self, save_file_name):
+        self.build_graph(self.policy_class)
         self.expert_step()
 
         # record return and std for plotting
@@ -40,7 +49,7 @@ class Dagger:
                 self.train_step()
                 self.test_step()
 
-            self.save_policy(fname)
+            self.save_policy(save_file_name)
 
         dagger_results = {'means': self.save_mean, 'stds': self.save_std, 'train_size': self.save_train_size,
                           'expert_mean': self.save_expert_mean, 'expert_std': self.save_expert_std}
@@ -48,8 +57,8 @@ class Dagger:
         print("DAgger iterations finished!")
         print(dagger_results)
 
-    def test(self, policy_class, fname):
-        self.build_test_graph(policy_class)
+    def test(self, fname):
+        self.build_test_graph(self.policy_class)
         self.load_policy(fname)
 
     def build_graph(self, policy_class):
@@ -57,7 +66,7 @@ class Dagger:
         self.y = tf.placeholder(tf.int32, name="y", shape=(None,) + self.act_shape)
 
         with tf.variable_scope("policy"):
-            self.policy = policy_class(self.x, self.y, self.num_actions)
+            self.policy = policy_class(self.x, self.y, self.num_actions, self.dir_name)
             self.yhat = self.policy.get_output()
             self.loss = self.policy.get_loss()
             self.train_step_op = tf.train.AdamOptimizer().minimize(self.loss)
@@ -84,8 +93,6 @@ class Dagger:
 
     def expert_step(self):
         returns = []
-        observations = []
-        actions = []
 
         for i in range(self.num_rollouts):
             obs = self.env.reset()
@@ -95,8 +102,9 @@ class Dagger:
 
             while not done:
                 action = self.env.expert_action()
-                observations.append(obs)
-                actions.append(action)
+
+                # data aggregation
+                self.add_sample(obs, action)
                 obs, r, done, _ = self.env.step(action)
                 totalr += r
                 steps += 1
@@ -115,24 +123,38 @@ class Dagger:
         print("expert mean return", self.save_expert_mean)
         print("expert std of return", self.save_expert_std)
 
-        self.obs_data = np.squeeze(np.array(observations))
-        self.act_data = np.squeeze(np.array(actions))
-
     def train_step(self):
+        sess = tf.get_default_session()
         # do we need to reset adam at this point?
 
-        for step in range(self.train_iterations):
-            batch_i = np.random.randint(0, self.obs_data.shape[0], size=self.train_batch_size)
-            self.train_step_op.run(feed_dict={self.x: self.obs_data[batch_i,], self.y: self.act_data[batch_i,]})
-            if (step % self.train_report_frequency == 0):
-                loss = self.loss.eval(feed_dict={self.x: self.obs_data, self.y: self.act_data})
-                print ("train step {} objective loss {}".format(step, loss))
+        dataset = self.policy.get_dataset(self.samples)
+
+        print("got dataset")
+        dataset = dataset.shuffle(len(self.samples))
+
+        print("shuffle)")
+        dataset = dataset.repeat(self.train_epochs)
+        dataset = dataset.batch(self.train_batch_size)
+
+        print("geting iterator")
+        iterator = dataset.make_one_shot_iterator()
+        get_next = iterator.get_next()
+
+        step = 0
+        while True:
+            try:
+                obs_batch, action_batch = sess.run(get_next)
+                _, loss = sess.run([self.train_step_op, self.loss], feed_dict={self.x: obs_batch, self.y: action_batch})
+                step += 1
+                if (step % self.train_report_frequency == 0):
+                    print ("train step {} objective loss {}".format(step, loss))
+            except tf.errors.OutOfRangeError:
+                break
 
     def test_step(self):
         returns = []
-        observations = []
-        actions = []
-        expert_actions = []
+
+        train_size = len(self.samples)
 
         for i in range(self.num_rollouts):
             obs = self.env.reset()
@@ -143,9 +165,9 @@ class Dagger:
             while not done:
                 action = self.yhat.eval(feed_dict={self.x: obs[None, :]})
                 expert_action = self.env.expert_action()
-                observations.append(obs)
-                actions.append(action)
-                expert_actions.append(expert_action)
+
+                # data aggregation
+                self.add_sample(obs, expert_action)
                 obs, r, done, _ = self.env.step(action)
                 totalr += r
                 steps += 1
@@ -160,10 +182,6 @@ class Dagger:
         print('mean return', np.mean(returns))
         print('std of return', np.std(returns))
 
-        train_size = self.obs_data.shape[0]
-        # data aggregation
-        self.obs_data = np.concatenate((self.obs_data, np.array(observations)), axis=0)
-        self.act_data = np.concatenate((self.act_data, np.array(expert_actions)), axis=0)
 
         # record mean return & std
         self.save_mean = np.append(self.save_mean, np.mean(returns))

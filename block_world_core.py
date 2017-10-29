@@ -352,8 +352,7 @@ def env_test(argv):
     prompt.cmdloop()
 
 import cv2
-import PIL
-from vtk_visualizer import plotxyzrgb
+# from vtk_visualizer import plotxyzrgb
 class _display:
     def __init__(self, show_obs=True):
         self.show_obs = show_obs
@@ -413,29 +412,29 @@ class _display:
 
         return g
 
-    def show_pointcloud(self, cam, depth):
-        cam = np.array(cam)
-        depth = np.array(depth)
-
-        print("cam shape {}".format(cam.shape))
-        print("depth shape {}".format(depth.shape))
-
-        rows = cam.shape[0]
-        cols = cam.shape[1]
-
-        xyzrgb = np.empty([rows * cols, 6])
-        i = 0
-
-        for index in np.ndindex(rows, cols):
-            xyzrgb[i, 0] = float(index[0]) / rows
-            xyzrgb[i, 1] = float(index[1]) / cols
-            xyzrgb[i, 2] = depth[index]
-            xyzrgb[i, 3] = cam[index[0], index[1], 0]
-            xyzrgb[i, 4] = cam[index[0], index[1], 1]
-            xyzrgb[i, 5] = cam[index[0], index[1], 2]
-            i += 1
-
-        plotxyzrgb(xyzrgb)
+    # def show_pointcloud(self, cam, depth):
+    #     cam = np.array(cam)
+    #     depth = np.array(depth)
+    #
+    #     print("cam shape {}".format(cam.shape))
+    #     print("depth shape {}".format(depth.shape))
+    #
+    #     rows = cam.shape[0]
+    #     cols = cam.shape[1]
+    #
+    #     xyzrgb = np.empty([rows * cols, 6])
+    #     i = 0
+    #
+    #     for index in np.ndindex(rows, cols):
+    #         xyzrgb[i, 0] = float(index[0]) / rows
+    #         xyzrgb[i, 1] = float(index[1]) / cols
+    #         xyzrgb[i, 2] = depth[index]
+    #         xyzrgb[i, 3] = cam[index[0], index[1], 0]
+    #         xyzrgb[i, 4] = cam[index[0], index[1], 1]
+    #         xyzrgb[i, 5] = cam[index[0], index[1], 2]
+    #         i += 1
+    #
+    #     plotxyzrgb(xyzrgb)
 
 if __name__ == "__main__":
     env_test(sys.argv[1:])

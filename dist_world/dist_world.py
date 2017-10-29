@@ -128,6 +128,8 @@ class DistworldEnv(gym.Env):
             else:
                 inc_pos = self.map_discrete_action(discrete_action)
 
+            # print("step {}".format(inc_pos))
+
             old_pos = self.finger_pos
             self.finger_pos = self.finger_pos + inc_pos
             reward = self.calc_intermediate_reward(old_pos)
@@ -177,11 +179,9 @@ class DistworldEnv(gym.Env):
         return self.obs()
 
     def _render(self, mode='human', close=False):
-        if mode is 'human' or mode is '':
-            # print(mode + ":target " + str(self.target_pos) + " finger " + str(self.finger_pos))
-            pass
-        else:
-            super(DistworldEnv, self).render(mode=mode)  # just raise an exception
+        # print('finger {} target {}'.format(self.finger_pos, self.target_pos))
+        # print("render ####")
+        pass
 
     def _seed(self, seed=None): return []
 

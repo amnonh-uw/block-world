@@ -21,3 +21,4 @@ out
 .idea/
 block_world/.vs/
 dist_world/dagger_dist_world/
+*.tfrecord
