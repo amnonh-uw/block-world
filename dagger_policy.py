@@ -1,10 +1,12 @@
+import os
 import tensorflow as tf
+import numpy as np
 from networks.network import Network
 
 class DaggerPolicy:
     width = 224
     height = 224
-    def __init__(self, x, y, num_actions):
+    def __init__(self, x, y, num_actions, dir_name):
         self.x = x
         self.y = y
         self.num_actions = num_actions
@@ -13,6 +15,13 @@ class DaggerPolicy:
         inputs = {'img1': img1, 'img2': img2}
         self.base_network = vgg16_siamese(inputs)
         self.logits = tf.layers.dense(inputs=self.base_network.get_output("dagger_fc9"), units=num_actions, activation=None, name='logits')
+
+        if dir_name:
+            os.makedirs(dir_name, exist_ok=True)
+            self.path = dir_name + "/"
+            self.sample_counter = 0
+        else:
+            self.path = None
 
     def get_output(self):
         return tf.argmax(self.logits, axis=1)
@@ -24,6 +33,60 @@ class DaggerPolicy:
     def policy_initializer(self):
         self.base_network.load('vgg16.npy', tf.get_default_session(), ignore_missing=True)
         pass
+
+    @staticmethod
+    def int64_feature(value):
+        return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
+
+    @staticmethod
+    def bytes_feature(value):
+        return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
+
+    def save(self, obs, action):
+        if self.path == None:
+            return (obs, action)
+        else:
+            sample_file = self.path + "s" + str(self.sample_counter) + ".tfrecord"
+            self.sample_counter += 1
+            writer = tf.python_io.TFRecordWriter(sample_file)
+
+            shape = np.array(obs.shape, np.int32).tobytes()
+            obs = obs.astype(np.uint8)
+            obs = obs.tobytes()
+            # write label, shape, and image content to the TFRecord file
+            example = tf.train.Example(features=tf.train.Features(
+                feature={
+                    'action': self.int64_feature(action),
+                    'obs_shape': self.bytes_feature(shape),
+                    'obs': self.bytes_feature(obs)
+                }))
+
+            writer.write(example.SerializeToString())
+            writer.close()
+            return sample_file
+
+    def get_dataset(self, samples):
+        if self.path == None:
+            return tf.contrib.data.Dataset.from_tensor_slices(samples)
+        else:
+            def tfrecord_map(serialized_example):
+                features = tf.parse_single_example(
+                    serialized_example,
+                    features={
+                        'action': tf.FixedLenFeature([], tf.int64),
+                        'obs_shape': tf.FixedLenFeature([], tf.string),
+                        'obs': tf.FixedLenFeature([], tf.string)
+                    })
+
+                obs = tf.decode_raw(features['obs'], tf.uint8)
+                obs_shape = tf.decode_raw(features['obs_shape'], tf.int32)
+                obs = tf.reshape(obs, obs_shape)
+                action = features['action']
+
+                return (obs, action)
+
+            dataset = tf.contrib.data.TFRecordDataset(samples)
+            return dataset.map(tfrecord_map)
 
 
 class vgg16_siamese(Network):

@@ -35,7 +35,7 @@ def main(argv):
                     DaggerPolicy,
                     num_rollouts = 25,
                     train_batch_size = 25,
-                    train_epochs = 100,
+                    train_epochs = 20,
                     iterations = 20,
                     dir_name = 'tmp_storage')
 

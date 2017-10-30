@@ -128,15 +128,10 @@ class Dagger:
         # do we need to reset adam at this point?
 
         dataset = self.policy.get_dataset(self.samples)
-
-        print("got dataset")
         dataset = dataset.shuffle(len(self.samples))
-
-        print("shuffle)")
         dataset = dataset.repeat(self.train_epochs)
         dataset = dataset.batch(self.train_batch_size)
 
-        print("geting iterator")
         iterator = dataset.make_one_shot_iterator()
         get_next = iterator.get_next()
 
@@ -146,8 +141,9 @@ class Dagger:
                 obs_batch, action_batch = sess.run(get_next)
                 _, loss = sess.run([self.train_step_op, self.loss], feed_dict={self.x: obs_batch, self.y: action_batch})
                 step += 1
+                print("one batch done")
                 if (step % self.train_report_frequency == 0):
-                    print ("train step {} objective loss {}".format(step, loss))
+                    print ("train step {} objective batch loss {}".format(step, loss))
             except tf.errors.OutOfRangeError:
                 break
 

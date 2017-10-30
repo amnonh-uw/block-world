@@ -206,6 +206,10 @@ class env:
         self.rightcam = self.extract_cam(data, "rightcam")
         self.centercam = self.extract_cam(data, "centercam")
         self.depthcam = self.extract_cam(data, "depthcam")
+
+        d = np.asarray(self.depthcam)
+        print("depth cap top pixel: {} {} {} {}".format(d[0,0,0], d[0,0,1], d[0,0,2], d[0,0,3]))
+
         self.highprecision  = self.extract_bool(data, "highprecision")
         self.target_pos = self.extract_vector3(data, "target_pos")
         self.finger_pos = self.extract_vector3(data, "finger_pos")

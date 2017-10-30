@@ -29,13 +29,15 @@ def main(argv):
     env = make(**vars(args))
 
     dagger = Dagger(env,
-        num_rollouts = 25,
-        train_batch_size = 25,
-        train_iterations = 10000,
-        train_report_frequency = 10,
-        iterations = 20)
+                    DaggerPolicy,
+                    num_rollouts = 25,
+                    train_batch_size = 25,
+                    train_epochs = 20,
+                    iterations = 20,
+                    dir_name = 'tmp_storage')
 
-    dagger.learn(DaggerPolicy, "dagger_dist_world")
+    dagger.learn(save_file_name="dagger_block_world")
+
     env.close()
 
 if __name__ == '__main__':
