@@ -17,4 +17,4 @@ echo 'Building linux player'
 $unity -quit $batchmode -logFile /dev/stdout -projectPath $cwd/block_world -buildLinuxUniversalPlayer $cwd/builds/linux_player
 echo 'Building mac player'
 $unity -quit $batchmode -logFile /dev/stdout -projectPath $cwd/block_world -buildOSXPlayer $cwd/builds/osx_player
-# game -screen-width width -screen-height height -screen-quality quality -screen-fullscreen 0
+
