@@ -177,9 +177,7 @@ class env:
     def extract_cam(self, data, key):
         if key in data:
             cam_stream = io.BytesIO(bytearray(data[key]))
-            img = Image.open(cam_stream)
-            print("extract {} shape {}", key, np.asarray(img).shape)
-            return img
+            return Image.open(cam_stream)
         else:
             print("can't find cam {}".format(key))
             return None
@@ -203,32 +201,34 @@ class env:
     def extract_bool(self, data, key):
         return(data[key])
 
-    def map_multichanneldepth(self, img):
+    def save_cams(self, path):
+        path = path.replace(".tfrecord", '')
+        self.leftcam.save(path + 'left.png')
+        self.rightcam.save(path + 'right.png')
+        self.centercam.save(path + 'center.png')
+        self.depthcam.save(path + 'depth.png')
+        self.multichanneldepthcam.save(path + 'multdepth.tiff')
+        self.normalcam.save(path + 'normals.png')
+
+    def decode_twochanneldepth(self, img):
+        source = np.asarray(img, dtype=np.uint32)
         # red channel is lowBits
         # green channel is highBits
-        # alpha channel is 1 (255) for valid values (i.e. rendered objects vs infinity) 0 otherwise
-        a = np.asarray(img).astype(np.float32)
-        print("alpha channel")
-        print(a[:,:,3])
-        print("red channel")
-        print(a[:,:,0])
-        print("green channel")
-        print(a[:, :, 1])
-        # b = a[:,:,0] / (256.0 * 256.0) + a[:,:,1] / 256.0
-        b = a[:, :, 1] / 256.0
-        print(b)
-        # b = np.multiply(b, a[:,:,3] / 256.0)
-        buint8 = (b * 256.0).astype(np.uint8)
-        c = np.stack((buint8, buint8, buint8), axis=-1)
+        # alpha channel is 255 for valid values (i.e. rendered objects vs infinity) 0 otherwise
 
-        return Image.fromarray(c)
+        depth = source[:,:,0] + 256 * source[:,:,1]
+        depth[source[:,:,3] != 255] = 0
+        depth = depth.astype(np.uint16)
+        depth_img = Image.fromarray(depth)
+
+        return depth_img
 
     def extract_response(self, data):
         self.leftcam = self.extract_cam(data, "leftcam")
         self.rightcam = self.extract_cam(data, "rightcam")
         self.centercam = self.extract_cam(data, "centercam")
         self.depthcam = self.extract_cam(data, "depthcam")
-        self.multichanneldepthcam = self.map_multichanneldepth(self.extract_cam(data, "multichanneldepthcam"))
+        self.multichanneldepthcam = self.decode_twochanneldepth(self.extract_cam(data, "multichanneldepthcam"))
         self.normalcam = self.extract_cam(data, "normalcam");
         self.target_pos = self.extract_vector3(data, "target_pos")
         self.finger_pos = self.extract_vector3(data, "finger_pos")
@@ -367,41 +367,41 @@ def env_test(argv):
     prompt.prompt = '>>> '
     prompt.cmdloop()
 
-import cv2
-# from vtk_visualizer import plotxyzrgb
+# import cv2
 class _display:
     def __init__(self, show_obs=True):
         self.show_obs = show_obs
         self.first = True
 
-        cv2.startWindowThread()
-        cv2.namedWindow("center cam", cv2.WINDOW_AUTOSIZE)
-        cv2.namedWindow("left cam", cv2.WINDOW_AUTOSIZE)
-        cv2.namedWindow("right cam", cv2.WINDOW_AUTOSIZE)
-        cv2.namedWindow("depth cam", cv2.WINDOW_AUTOSIZE)
+        # cv2.startWindowThread()
+        # cv2.namedWindow("center cam", cv2.WINDOW_AUTOSIZE)
+        # cv2.namedWindow("left cam", cv2.WINDOW_AUTOSIZE)
+        # cv2.namedWindow("right cam", cv2.WINDOW_AUTOSIZE)
+        # cv2.namedWindow("depth cam", cv2.WINDOW_AUTOSIZE)
 
     def show(self, env):
+        env.save_cams("cam")
         if self.show_obs:
             if env.collision:
                 print("BOOM")
 
-            centercam = cv2.cvtColor(np.array(env.centercam), cv2.COLOR_RGB2BGR)
-            leftcam = cv2.cvtColor(np.array(env.leftcam), cv2.COLOR_RGB2BGR)
-            rightcam = cv2.cvtColor(np.array(env.rightcam), cv2.COLOR_RGB2BGR)
-            depthcam = cv2.cvtColor(np.array(env.depthcam), cv2.COLOR_RGB2BGR);
-            multichanneldepthcam = cv2.cvtColor(np.array(env.multichanneldepthcam), cv2.COLOR_RGB2BGR);
-            normalcam = cv2.cvtColor(np.array(env.normalcam), cv2.COLOR_RGB2BGR);
+            # centercam = cv2.cvtColor(np.array(env.centercam), cv2.COLOR_RGB2BGR)
+            # leftcam = cv2.cvtColor(np.array(env.leftcam), cv2.COLOR_RGB2BGR)
+            # rightcam = cv2.cvtColor(np.array(env.rightcam), cv2.COLOR_RGB2BGR)
+            # depthcam = cv2.cvtColor(np.array(env.depthcam), cv2.COLOR_RGB2BGR);
+            # multichanneldepthcam = cv2.cvtColor(np.array(env.multichanneldepthcam), cv2.COLOR_RGB2BGR);
+            # normalcam = cv2.cvtColor(np.array(env.normalcam), cv2.COLOR_RGB2BGR);
 
-            c = np.asarray(env.depthcam, dtype=np.float)
-            print("depth red channel")
-            print(c[:,:,0])
+            # c = np.asarray(env.depthcam, dtype=np.float)
+            # print("depth red channel")
+            # print(c[:,:,0])
 
-            cv2.imshow("center cam", centercam)
-            cv2.imshow("left cam", leftcam)
-            cv2.imshow("right cam", rightcam)
-            cv2.imshow("depth cam", depthcam)
-            cv2.imshow("multi channel depth cam", multichanneldepthcam)
-            cv2.imshow("normal cam", normalcam)
+            # cv2.imshow("center cam", centercam)
+            # cv2.imshow("left cam", leftcam)
+            # cv2.imshow("right cam", rightcam)
+            # cv2.imshow("depth cam", depthcam)
+            # cv2.imshow("multi channel depth cam", multichanneldepthcam)
+            # cv2.imshow("normal cam", normalcam)
 
             # if env.highprecision:
             #     f = self.rgba_img_to_float(env.depthcam)
@@ -427,39 +427,6 @@ class _display:
 
     def show_image(self, cam):
         cam.show()
-
-    def rgba_img_to_float(self, img):
-        kdecodedot = np.array([1.0, 1.0 / 255.0, 1.0 / 65025.0, 1.0 / 16581375.0], dtype=float);
-
-        a = np.array(img).astype(float)
-        g = np.tensordot(a, kdecodedot, axes=([2], [0]))
-        g = g / 255
-
-        return g
-
-    # def show_pointcloud(self, cam, depth):
-    #     cam = np.array(cam)
-    #     depth = np.array(depth)
-    #
-    #     print("cam shape {}".format(cam.shape))
-    #     print("depth shape {}".format(depth.shape))
-    #
-    #     rows = cam.shape[0]
-    #     cols = cam.shape[1]
-    #
-    #     xyzrgb = np.empty([rows * cols, 6])
-    #     i = 0
-    #
-    #     for index in np.ndindex(rows, cols):
-    #         xyzrgb[i, 0] = float(index[0]) / rows
-    #         xyzrgb[i, 1] = float(index[1]) / cols
-    #         xyzrgb[i, 2] = depth[index]
-    #         xyzrgb[i, 3] = cam[index[0], index[1], 0]
-    #         xyzrgb[i, 4] = cam[index[0], index[1], 1]
-    #         xyzrgb[i, 5] = cam[index[0], index[1], 2]
-    #         i += 1
-    #
-    #     plotxyzrgb(xyzrgb)
 
 if __name__ == "__main__":
     env_test(sys.argv[1:])

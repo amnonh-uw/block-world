@@ -7,7 +7,7 @@ class BlockWorldEnv(gym.Env):
     class ObsSpace(gym.Space):
         def __init__(self, width, height):
             # center cam + depth cam
-            self.shape = tuple([width, height, 8])
+            self.shape = tuple([width, height, 4])
             self.dtype = tf.float32
 
     class ActionSpace(gym.Space):
@@ -45,9 +45,13 @@ class BlockWorldEnv(gym.Env):
         self.block_env = make_env(run=self.run, verbose=True, params_args=kwargs)
 
     def obs(self):
-        l = np.array(self.block_env.leftcam)
-        r = np.array(self.block_env.rightcam)
-        obs = np.concatenate((l,r), axis=2)
+        c = np.array(self.block_env.centercam)
+        c = c[:,:,:-1]
+        d = np.array(self.block_env.multichanneldepthcam)
+        d = np.expand_dims(d, axis=2)
+        obs = np.concatenate((c,d), axis=2).astype(np.float32)
+
+        print("obseravtion shape {}".format(obs.shape))
         return obs
 
 
@@ -122,6 +126,9 @@ class BlockWorldEnv(gym.Env):
             pass
         else:
             super(BlockworldEnv, self).render(mode=mode)  # just raise an exception
+
+    def save_cams(self, path):
+        self.block_env.save_cams(path)
 
     def _seed(self, seed=None):
         return []

@@ -27,9 +27,10 @@ class Dagger:
 
         self.samples = []
 
-    def add_sample(self, observation, action):
-        sample = self.policy.save(observation, action)
+    def add_sample(self, observation, action, phase=None, rollout=None, step=None):
+        sample = self.policy.save(observation, action, phase, rollout, step)
         self.samples.append(sample)
+        return sample
 
     def learn(self, save_file_name):
         self.build_graph(self.policy_class)
@@ -47,7 +48,7 @@ class Dagger:
             for i in range(self.iterations):
                 print("DAgger iteration {}".format(i))
                 self.train_step()
-                self.test_step()
+                self.test_step(iter=i+1)
 
             self.save_policy(save_file_name)
 
@@ -104,7 +105,8 @@ class Dagger:
                 action = self.env.expert_action()
 
                 # data aggregation
-                self.add_sample(obs, action)
+                path = self.add_sample(obs, action, phase=0, rollout=i, step=steps)
+                self.env.save_cams(path)
                 obs, r, done, _ = self.env.step(action)
                 totalr += r
                 steps += 1
@@ -141,13 +143,12 @@ class Dagger:
                 obs_batch, action_batch = sess.run(get_next)
                 _, loss = sess.run([self.train_step_op, self.loss], feed_dict={self.x: obs_batch, self.y: action_batch})
                 step += 1
-                print("one batch done")
                 if (step % self.train_report_frequency == 0):
                     print ("train step {} objective batch loss {}".format(step, loss))
             except tf.errors.OutOfRangeError:
                 break
 
-    def test_step(self):
+    def test_step(self, iter=None):
         returns = []
 
         train_size = len(self.samples)
@@ -163,7 +164,8 @@ class Dagger:
                 expert_action = self.env.expert_action()
 
                 # data aggregation
-                self.add_sample(obs, expert_action)
+                path = self.add_sample(obs, expert_action, phase=iter, rollout=i, step=steps)
+                self.env.save_cams(path)
                 obs, r, done, _ = self.env.step(action)
                 totalr += r
                 steps += 1

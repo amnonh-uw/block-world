@@ -2,7 +2,7 @@ import sys
 import argparse
 import tensorflow as tf
 from block_world import BlockWorldEnv as make
-from dagger import Dagger
+from dagger.dagger import Dagger
 from dagger_policy import DaggerPolicy
 
 def main(argv):

@@ -1,7 +1,7 @@
 import os
 import tensorflow as tf
 import numpy as np
-from networks.network import Network
+from lib.networks.network import Network
 
 class DaggerPolicy:
     width = 224
@@ -11,7 +11,19 @@ class DaggerPolicy:
         self.y = y
         self.num_actions = num_actions
 
-        img1, _, img2, _ = tf.split(x, [3, 1, 3, 1], axis=3)
+        # observations: c = np.array(self.block_env.centercam)
+        #                   c = c[:, :, :-1]
+        #                   d = np.array(self.block_env.multichanneldepthcam)
+
+        centercam, depthcam = tf.split(x, (3, 1), axis=-1)
+
+        print("centercam {} depthcam {}".format(centercam.get_shape(), depthcam.get_shape()))
+        img1 = centercam - vgg16_siamese.mean()
+        depthcam = depthcam  / (256.0 * 256.0)
+        img2 = tf.concat((depthcam, depthcam, depthcam), axis=3)
+
+        print("img1 {} img2 {}".format(img1.get_shape(), img2.get_shape()))
+
         inputs = {'img1': img1, 'img2': img2}
         self.base_network = vgg16_siamese(inputs)
         self.logits = tf.layers.dense(inputs=self.base_network.get_output("dagger_fc9"), units=num_actions, activation=None, name='logits')
@@ -42,11 +54,22 @@ class DaggerPolicy:
     def bytes_feature(value):
         return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
-    def save(self, obs, action):
+    def save(self, obs, action, phase = None, rollout=None, step=None):
         if self.path == None:
             return (obs, action)
         else:
-            sample_file = self.path + "s" + str(self.sample_counter) + ".tfrecord"
+            sample_file = self.path + "s"
+            if phase is not None:
+                sample_file += "p" + str(phase)
+            if rollout is not None:
+                sample_file += "r" + str(rollout)
+            if step is not None:
+                sample_file += "s" + str(step)
+
+            if step is None or rollout is None or phase is None:
+                sample_file += "c" +  str(self.sample_counter)
+
+            sample_file += ".tfrecord"
             self.sample_counter += 1
             writer = tf.python_io.TFRecordWriter(sample_file)
 
@@ -148,3 +171,9 @@ class vgg16_siamese(Network):
          .concat(1, name='combined_fc7')
          .fc(256, name="dagger_fc8")
          .fc(256, name="dagger_fc9"))
+
+    @staticmethod
+    def mean():
+        # Pixel mean values (BGR order) as a (1, 1, 3) array
+        # These are the values originally used for training VGG16
+        return np.array([[103.939, 116.779, 123.68]])
