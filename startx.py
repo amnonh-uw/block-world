@@ -83,7 +83,7 @@ def startx(display=15):
 
 if __name__ == "__main__":
     argv = sys.argv
-    if argv.len == 1:
+    if len(argv) == 1:
         disp = 15
     else:
         disp = int(argv[1])
@@ -91,3 +91,5 @@ if __name__ == "__main__":
     print("starting X on display {}".format(disp))
 
     startx(disp)
+
+    print("export DISPLAY=:{}.0", disp)
