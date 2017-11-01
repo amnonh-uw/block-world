@@ -177,7 +177,9 @@ class env:
     def extract_cam(self, data, key):
         if key in data:
             cam_stream = io.BytesIO(bytearray(data[key]))
-            return Image.open(cam_stream)
+            img = Image.open(cam_stream)
+            print("extract {} shape {}", key, np.asarray(img).shape)
+            return img
         else:
             print("can't find cam {}".format(key))
             return None
@@ -201,16 +203,33 @@ class env:
     def extract_bool(self, data, key):
         return(data[key])
 
+    def map_multichanneldepth(self, img):
+        # red channel is lowBits
+        # green channel is highBits
+        # alpha channel is 1 (255) for valid values (i.e. rendered objects vs infinity) 0 otherwise
+        a = np.asarray(img).astype(np.float32)
+        print("alpha channel")
+        print(a[:,:,3])
+        print("red channel")
+        print(a[:,:,0])
+        print("green channel")
+        print(a[:, :, 1])
+        # b = a[:,:,0] / (256.0 * 256.0) + a[:,:,1] / 256.0
+        b = a[:, :, 1] / 256.0
+        print(b)
+        # b = np.multiply(b, a[:,:,3] / 256.0)
+        buint8 = (b * 256.0).astype(np.uint8)
+        c = np.stack((buint8, buint8, buint8), axis=-1)
+
+        return Image.fromarray(c)
+
     def extract_response(self, data):
         self.leftcam = self.extract_cam(data, "leftcam")
         self.rightcam = self.extract_cam(data, "rightcam")
         self.centercam = self.extract_cam(data, "centercam")
         self.depthcam = self.extract_cam(data, "depthcam")
-
-        d = np.asarray(self.depthcam)
-        print("depth cap top pixel: {} {} {} {}".format(d[0,0,0], d[0,0,1], d[0,0,2], d[0,0,3]))
-
-        self.highprecision  = self.extract_bool(data, "highprecision")
+        self.multichanneldepthcam = self.map_multichanneldepth(self.extract_cam(data, "multichanneldepthcam"))
+        self.normalcam = self.extract_cam(data, "normalcam");
         self.target_pos = self.extract_vector3(data, "target_pos")
         self.finger_pos = self.extract_vector3(data, "finger_pos")
         self.target_rot = self.extract_vector3(data, "target_rot")
@@ -223,13 +242,6 @@ class env:
         s = s.replace(")", "")
 
         return s.split(delim)
-
-    def get_depth(self):
-        import cv2
-        stereo = cv2.StereoBM(1, 16, 15)
-        disparity = stereo.compute(self.leftcam, self.rightcam)
-
-        return disparity
 
     def get_observation(self):
         return np.concatenate((self.leftcam, self.rightcam), axis=2)
@@ -376,11 +388,20 @@ class _display:
             centercam = cv2.cvtColor(np.array(env.centercam), cv2.COLOR_RGB2BGR)
             leftcam = cv2.cvtColor(np.array(env.leftcam), cv2.COLOR_RGB2BGR)
             rightcam = cv2.cvtColor(np.array(env.rightcam), cv2.COLOR_RGB2BGR)
+            depthcam = cv2.cvtColor(np.array(env.depthcam), cv2.COLOR_RGB2BGR);
+            multichanneldepthcam = cv2.cvtColor(np.array(env.multichanneldepthcam), cv2.COLOR_RGB2BGR);
+            normalcam = cv2.cvtColor(np.array(env.normalcam), cv2.COLOR_RGB2BGR);
 
+            c = np.asarray(env.depthcam, dtype=np.float)
+            print("depth red channel")
+            print(c[:,:,0])
 
             cv2.imshow("center cam", centercam)
             cv2.imshow("left cam", leftcam)
             cv2.imshow("right cam", rightcam)
+            cv2.imshow("depth cam", depthcam)
+            cv2.imshow("multi channel depth cam", multichanneldepthcam)
+            cv2.imshow("normal cam", normalcam)
 
             # if env.highprecision:
             #     f = self.rgba_img_to_float(env.depthcam)

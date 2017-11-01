@@ -21,8 +21,6 @@ public class Tray : MonoBehaviour
 	public Camera rightcam;
 	public GameObject centercam_controller;
 	public Camera centercam;
-	public GameObject depthcam_controller;
-	public Camera depthcam;
 
 	public GameObject tray;
 	public GameObject rim1;
@@ -69,15 +67,6 @@ public class Tray : MonoBehaviour
     // Use this for initialization
     void Start()
     {
-		//
-		// Make main camera show depth!
-		//
-		RenderDepth RenderScript = Camera.main.gameObject.AddComponent<RenderDepth> ();
-		if (RenderScript == null) {
-			Debug.Log ("failed to add RenderDepth script to main cam");
-		}
-		RenderScript.DepthOn = false;
-
 		colorGenerator = new ColorGenerator ();
 		p = new Params () ;
 		ParametersChanged ();
@@ -474,6 +463,7 @@ public class Tray : MonoBehaviour
 		cam_controller.SetActive (false);
 		cam.targetTexture = new RenderTexture(p.cameraWidth, p.cameraHeight, 24);
 		cam.transform.localEulerAngles = Vector3.zero;
+		cam_controller.SetActive (true);
 	
 		return cam_controller;
 	}
@@ -486,12 +476,7 @@ public class Tray : MonoBehaviour
 		rightcam = rightcam_controller.GetComponent<Camera> ();
 		centercam_controller = CreateCamera ("Center Camera", 0f);
 		centercam = centercam_controller.GetComponent<Camera> ();
-		depthcam_controller = CreateCamera ("Center Depth Camera", 0f);
-		depthcam = depthcam_controller.GetComponent<Camera> ();
-		RenderDepth RenderScript = depthcam_controller.AddComponent<RenderDepth> ();
-		if (RenderScript == null) {
-			Debug.Log ("failed to add RenderDepth script to depth cam");
-		}
+		centercam.gameObject.AddComponent<ImageSynthesis> ();
 	}
 
 
@@ -695,7 +680,8 @@ public class Tray : MonoBehaviour
         public byte[] rightcam;
 		public byte[] centercam;
 		public byte[] depthcam;
-		public bool highprecision;
+		public byte[] multichanneldepthcam;
+		public byte[] normalcam;
         public Vector3 finger_pos;
 		public Vector3 finger_rot;
         public Vector3 target_pos;
@@ -705,7 +691,7 @@ public class Tray : MonoBehaviour
 
  	byte[] ScreenShot(Camera cam)
 	{
-		cam.gameObject.SetActive (true);
+		// cam.gameObject.SetActive (true);
 		RenderTexture currentRT = RenderTexture.active;
 		RenderTexture.active = cam.targetTexture;
 		cam.Render();
@@ -717,7 +703,7 @@ public class Tray : MonoBehaviour
 
 		byte[] buff = image.EncodeToPNG();
 		Destroy (image);
-		cam.gameObject.SetActive (false);
+		// cam.gameObject.SetActive (false);
 		return(buff);
 	}
 
@@ -742,9 +728,10 @@ public class Tray : MonoBehaviour
 			r.leftcam = ScreenShot (leftcam);
 			r.rightcam = ScreenShot (rightcam);
 			r.centercam = ScreenShot (centercam);
-			r.depthcam = ScreenShot (depthcam);
-			RenderDepth rd = depthcam.gameObject.GetComponent<RenderDepth>();
-			r.highprecision = rd.highPrecisionDepth;
+			ImageSynthesis center_is = centercam.gameObject.GetComponent<ImageSynthesis> ();
+			r.depthcam = center_is.Encode ("_depth");
+			r.multichanneldepthcam = center_is.Encode ("_depthmulti");
+			r.normalcam = center_is.Encode ("_normals");
 			r.finger_pos = finger.transform.position;
 			r.finger_rot = finger.transform.rotation.eulerAngles;
 			r.target_pos = target.transform.position;
