@@ -142,9 +142,7 @@ class Dagger:
         step = 0
         while True:
             try:
-                print("getting batch")
                 obs_batch, positions_batch, action_batch = sess.run(get_next)
-                print("training batch")
                 _, loss = sess.run([self.train_step_op, self.loss],
                                    feed_dict={self.images: obs_batch,
                                               self.positions : positions_batch,
