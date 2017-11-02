@@ -28,7 +28,6 @@ class BlockWorldEnv(gym.Env):
         self.__dict__.update(kwargs)
 
         self.metadata = {'render.modes': ['human', '']}
-        self.observation_space = self.ObsSpace(self.width, self.height)
         self.action_space = self.ActionSpace()
         self._spec = self.EnvSpec(timestep_limit=35)
 
@@ -44,15 +43,23 @@ class BlockWorldEnv(gym.Env):
 
         self.block_env = make_env(run=self.run, verbose=True, params_args=kwargs)
 
+    def obs_shape(self):
+        return (self.width, self.height, 4)
+
+    def positions_shape(self):
+        return (4,)
+
     def obs(self):
         c = np.array(self.block_env.centercam)
         c = c[:,:,:-1]
         d = np.array(self.block_env.multichanneldepthcam)
         d = np.expand_dims(d, axis=2)
-        obs = np.concatenate((c,d), axis=2).astype(np.float32)
+        return np.concatenate((c,d), axis=2).astype(np.float32)
 
-        return obs
-
+    def positions(self):
+        f = self.block_env.finger_screen_pos
+        t = self.block_env.target_screen_pos
+        return np.array([f[0], f[1], t[0], t[1]], dtype=np.float32)
 
     def target_reached(self):
         dist = abs(self.block_env.finger_pos - self.block_env.target_pos)
@@ -120,12 +127,15 @@ class BlockWorldEnv(gym.Env):
 
     def _render(self, mode='human', close=False):
         if mode is 'human' or mode is '':
-            print("target: " + str(self.target_pos) + " finger: " + str(self.finger_pos))
+            print("target: " + str(self.block_env.target_pos) + " finger: " + str(self.block_env.finger_pos))
         else:
             super(gym.env, self).render(mode=mode)  # just raise an exception
 
     def save_cams(self, path):
         self.block_env.save_cams(path)
+
+    def save_positions(self, path):
+        self.block_env.save_positions(path)
 
     def _seed(self, seed=None):
         return []

@@ -18,7 +18,8 @@ class Dagger:
         self.__dict__.update(kwargs)
         self.env = env
         self.policy_class = policy_class
-        self.obs_shape = env.observation_space.shape
+        self.obs_shape = env.obs_shape()
+        self.positions_shape = env.positions_shape()
         self.act_shape = ()
 
         self.save_mean = []
@@ -27,8 +28,8 @@ class Dagger:
 
         self.samples = []
 
-    def add_sample(self, observation, action, phase=None, rollout=None, step=None):
-        sample = self.policy.save(observation, action, phase, rollout, step)
+    def add_sample(self, observation, positions, action, phase=None, rollout=None, step=None):
+        sample = self.policy.save(observation, positions, action, phase, rollout, step)
         self.samples.append(sample)
         return sample
 
@@ -63,12 +64,13 @@ class Dagger:
         self.load_policy(fname)
 
     def build_graph(self, policy_class):
-        self.x = tf.placeholder(tf.float32, name="x", shape=(None,) + self.obs_shape)
-        self.y = tf.placeholder(tf.int32, name="y", shape=(None,) + self.act_shape)
+        self.images = tf.placeholder(tf.float32, name="images", shape=(None,) + self.obs_shape)
+        self.positions = tf.placeholder(tf.float32, name="positions", shape=(None,) + self.positions_shape)
+        self.action = tf.placeholder(tf.int32, name="action", shape=(None,) + self.act_shape)
 
         with tf.variable_scope("policy"):
-            self.policy = policy_class(self.x, self.y, self.num_actions, self.dir_name)
-            self.yhat = self.policy.get_output()
+            self.policy = policy_class(self.images, self.positions, self.action, self.num_actions, self.dir_name)
+            self.action_hat = self.policy.get_output()
             self.loss = self.policy.get_loss()
             self.train_step_op = tf.train.AdamOptimizer().minimize(self.loss)
 
@@ -76,7 +78,7 @@ class Dagger:
         self.x = tf.placeholder(tf.float32, shape=(None,) + self.obs_shape)
         with tf.variable_scope("policy"):
             self.policy = policy_class(self.x, None, self.num_actions)
-            self.yhat  = self.policy.get_output()
+            self.action_hat  = self.policy.get_output()
 
     def save_policy(self, fname):
         fname += "/"
@@ -89,14 +91,12 @@ class Dagger:
         saver = tf.train.Saver()
         saver.restore(tf.get_default_session(), fname)
 
-    def eval_policy(self, obs):
-        return self.yhat.eval(feed_dict={self.x: obs[None, :]})
-
     def expert_step(self):
         returns = []
 
         for i in range(self.num_rollouts):
             obs = self.env.reset()
+            positions = self.env.positions()
             done = False
             totalr = 0.
             steps = 0
@@ -105,9 +105,11 @@ class Dagger:
                 action = self.env.expert_action()
 
                 # data aggregation
-                path = self.add_sample(obs, action, phase=0, rollout=i, step=steps)
+                path = self.add_sample(obs, positions, action, phase=0, rollout=i, step=steps)
                 self.env.save_cams(path)
+                self.env.save_positions(path)
                 obs, r, done, _ = self.env.step(action)
+                positions = self.env.positions()
                 totalr += r
                 steps += 1
                 if self.render:
@@ -140,8 +142,11 @@ class Dagger:
         step = 0
         while True:
             try:
-                obs_batch, action_batch = sess.run(get_next)
-                _, loss = sess.run([self.train_step_op, self.loss], feed_dict={self.x: obs_batch, self.y: action_batch})
+                obs_batch, positions_batch, action_batch = sess.run(get_next)
+                _, loss = sess.run([self.train_step_op, self.loss],
+                                   feed_dict={self.images: obs_batch,
+                                              self.positions : positions_batch,
+                                              self.action_hat: action_batch})
                 step += 1
                 if (step % self.train_report_frequency == 0):
                     print ("train step {} objective batch loss {}".format(step, loss))
@@ -155,18 +160,21 @@ class Dagger:
 
         for i in range(self.num_rollouts):
             obs = self.env.reset()
+            positions = self.env.positions()
             done = False
             totalr = 0.
             steps = 0
 
             while not done:
-                action = self.yhat.eval(feed_dict={self.x: obs[None, :]})
+                action = self.action_hat.eval(feed_dict={self.images: obs[None, :], self.positions : positions[None, :]})
                 expert_action = self.env.expert_action()
 
                 # data aggregation
-                path = self.add_sample(obs, expert_action, phase=iter, rollout=i, step=steps)
+                path = self.add_sample(obs, positions, expert_action, phase=iter, rollout=i, step=steps)
                 self.env.save_cams(path)
+                self.env.save_positions(path)
                 obs, r, done, _ = self.env.step(action)
+                positions = self.env.positions()
                 totalr += r
                 steps += 1
                 if self.render:

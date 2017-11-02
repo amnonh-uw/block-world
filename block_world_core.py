@@ -210,6 +210,11 @@ class env:
         self.multichanneldepthcam.save(path + 'multdepth.tiff')
         self.normalcam.save(path + 'normals.png')
 
+    def save_positions(self, path):
+        path = path.replace(".tfrecord", '')
+        with open(path + 'positions.txt', 'w') as f:
+            f.write("finger screen {} target screen {}".format(self.finger_screen_pos, self.target_screen_pos))
+
     def decode_twochanneldepth(self, img):
         source = np.asarray(img, dtype=np.uint32)
         # red channel is lowBits
@@ -232,6 +237,8 @@ class env:
         self.normalcam = self.extract_cam(data, "normalcam");
         self.target_pos = self.extract_vector3(data, "target_pos")
         self.finger_pos = self.extract_vector3(data, "finger_pos")
+        self.finger_screen_pos = self.extract_vector3(data, "finger_screen_pos")
+        self.target_screen_pos = self.extract_vector3(data, "target_screen_pos")
         self.target_rot = self.extract_vector3(data, "target_rot")
         self.finger_rot = self.extract_vector3(data, "finger_rot")
         self.collision = self.extract_bool(data, "collision")

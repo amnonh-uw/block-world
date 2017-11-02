@@ -6,25 +6,22 @@ from lib.networks.network import Network
 class DaggerPolicy:
     width = 224
     height = 224
-    def __init__(self, x, y, num_actions, dir_name):
-        self.x = x
-        self.y = y
+    def __init__(self, images, positions, action, num_actions, dir_name):
+        self.images = images
+        self.action = action
+        self.positions = positions
         self.num_actions = num_actions
 
         # observations: c = np.array(self.block_env.centercam)
         #                   c = c[:, :, :-1]
         #                   d = np.array(self.block_env.multichanneldepthcam)
 
-        centercam, depthcam = tf.split(x, (3, 1), axis=-1)
-
-        print("centercam {} depthcam {}".format(centercam.get_shape(), depthcam.get_shape()))
+        centercam, depthcam = tf.split(images, (3, 1), axis=-1)
         img1 = centercam - vgg16_siamese.mean()
         depthcam = depthcam  / (256.0 * 256.0)
         img2 = tf.concat((depthcam, depthcam, depthcam), axis=3)
 
-        print("img1 {} img2 {}".format(img1.get_shape(), img2.get_shape()))
-
-        inputs = {'img1': img1, 'img2': img2}
+        inputs = {'img1': img1, 'img2': img2, 'positions' : positions}
         self.base_network = vgg16_siamese(inputs)
         self.logits = tf.layers.dense(inputs=self.base_network.get_output("dagger_fc9"), units=num_actions, activation=None, name='logits')
 
@@ -39,7 +36,7 @@ class DaggerPolicy:
         return tf.argmax(self.logits, axis=1)
 
     def get_loss(self):
-        onehot_labels = tf.one_hot(self.y, self.num_actions)
+        onehot_labels = tf.one_hot(self.action, self.num_actions)
         return tf.contrib.losses.softmax_cross_entropy(self.logits, onehot_labels)
 
     def policy_initializer(self):
@@ -54,9 +51,9 @@ class DaggerPolicy:
     def bytes_feature(value):
         return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
-    def save(self, obs, action, phase = None, rollout=None, step=None):
+    def save(self, obs, positions, action, phase = None, rollout=None, step=None):
         if self.path == None:
-            return (obs, action)
+            return (obs, positions, action)
         else:
             sample_file = self.path + "s"
             if phase is not None:
@@ -73,14 +70,18 @@ class DaggerPolicy:
             self.sample_counter += 1
             writer = tf.python_io.TFRecordWriter(sample_file)
 
-            shape = np.array(obs.shape, np.int32).tobytes()
+            positions_shape = np.array(positions.shape, np.uint32).tobytes()
+            obs_shape = np.array(obs.shape, np.int32).tobytes()
+            positions = positions.tobytes()
             obs = obs.astype(np.uint8)
             obs = obs.tobytes()
             # write label, shape, and image content to the TFRecord file
             example = tf.train.Example(features=tf.train.Features(
                 feature={
                     'action': self.int64_feature(action),
-                    'obs_shape': self.bytes_feature(shape),
+                    'positions_shape' : self.bytes_feature(positions_shape),
+                    'positions' : self.bytes_feature(positions),
+                    'obs_shape': self.bytes_feature(obs_shape),
                     'obs': self.bytes_feature(obs)
                 }))
 
@@ -97,16 +98,21 @@ class DaggerPolicy:
                     serialized_example,
                     features={
                         'action': tf.FixedLenFeature([], tf.int64),
+                        'positions_shape' : tf.FixedLenFeature([], tf.string),
+                        'positions' : tf.FixedLenFeature([], tf.string),
                         'obs_shape': tf.FixedLenFeature([], tf.string),
                         'obs': tf.FixedLenFeature([], tf.string)
                     })
 
+                positions = tf.decode_raw(features['positions'], tf.float32)
+                positions_shape = tf.decode_raw(features['positions_shape'], tf.int32)
+                positions = tf.reshape(positions, positions_shape)
                 obs = tf.decode_raw(features['obs'], tf.uint8)
                 obs_shape = tf.decode_raw(features['obs_shape'], tf.int32)
                 obs = tf.reshape(obs, obs_shape)
                 action = features['action']
 
-                return (obs, action)
+                return (obs, positions, action)
 
             dataset = tf.contrib.data.TFRecordDataset(samples)
             return dataset.map(tfrecord_map)
@@ -166,8 +172,8 @@ class vgg16_siamese(Network):
          .fc(4096, name='fc6_p')
          .fc(4096, name='fc7_p'))
 
-          # combine towers
-        (self.feed('fc7', 'fc7_p')
+          # combine towers and positions
+        (self.feed('fc7', 'fc7_p', 'positions')
          .concat(1, name='combined_fc7')
          .fc(256, name="dagger_fc8")
          .fc(256, name="dagger_fc9"))
