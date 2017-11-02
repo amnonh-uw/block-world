@@ -34,6 +34,7 @@ def main(argv):
                     train_batch_size = 25,
                     train_epochs = 20,
                     iterations = 20,
+                    train_report_frequency = 10,
                     dir_name = 'tmp_storage')
 
     dagger.learn(save_file_name="dagger_block_world")

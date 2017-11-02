@@ -51,7 +51,6 @@ class BlockWorldEnv(gym.Env):
         d = np.expand_dims(d, axis=2)
         obs = np.concatenate((c,d), axis=2).astype(np.float32)
 
-        print("obseravtion shape {}".format(obs.shape))
         return obs
 
 
@@ -120,12 +119,10 @@ class BlockWorldEnv(gym.Env):
         return self.obs()
 
     def _render(self, mode='human', close=False):
-        print("_render_ ###################")
         if mode is 'human' or mode is '':
-            # print(mode + ":target " + str(self.target_pos) + " finger " + str(self.finger_pos))
-            pass
+            print("target: " + str(self.target_pos) + " finger: " + str(self.finger_pos))
         else:
-            super(BlockworldEnv, self).render(mode=mode)  # just raise an exception
+            super(gym.env, self).render(mode=mode)  # just raise an exception
 
     def save_cams(self, path):
         self.block_env.save_cams(path)
