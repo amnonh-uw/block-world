@@ -155,6 +155,12 @@ public class Tray : MonoBehaviour
 		ListenerResponse.OutputStream.Close ();
 	}
 
+    public void BoolResponse(bool b) {
+            ResponseBool r = new ResponseBool();
+            r.b = b;
+            JsonResponse (JsonUtility.ToJson (r));
+    }
+
 	public void ClearObjects() {
 		foreach (GameObject obj in ObjList)
 			Destroy (obj);
@@ -600,6 +606,13 @@ public class Tray : MonoBehaviour
 						listenerAction = null;
 					}
 
+                    if (listenerAction == "check_occupied") {
+                        Pose p = new Pose (listenerArgs);
+                       
+                        BoolResponse (OccupancyCheck (p, finger.transform.localScale));
+                        listenerAction = null;
+                    }
+
 					if (listenerAction == "move_cams")
 					{
 						Pose p = new Pose (listenerArgs);
@@ -665,13 +678,25 @@ public class Tray : MonoBehaviour
 		float distance = p.position.magnitude;
 
 		if (Physics.Raycast (g.transform.position, direction, distance)) {
-			// Debug.LogFormat ("Collision check on {0} pose {1} failed", g.name, p.ToString());
 			CollisionHappened = true;
 			return false;
 		}
-		// Debug.LogFormat ("Collision check on {0} pose {1} succeeded", g.name, p.ToString());
 		return true;
 	}
+
+    bool OccupancyCheck(Pose p, Vector3 size) {
+		Vector3 halfExtents = size * 0.5f;
+		Collider[]  c = Physics.OverlapBox(p.position, halfExtents, Quaternion.identity, -1, QueryTriggerInteraction.Ignore);
+
+		Debug.Log ("Occupancy check");
+        return c.Length != 0;
+    }
+
+    [System.Serializable]
+    public class ResponseBool
+    {
+        public bool b;
+    }
 
     [System.Serializable]
     public class Response
@@ -684,8 +709,10 @@ public class Tray : MonoBehaviour
 		public byte[] normalcam;
         public Vector3 finger_pos;
 		public Vector3 finger_rot;
+		public Vector3 finger_screen_pos;
         public Vector3 target_pos;
 		public Vector3 target_rot;
+		public Vector3 target_screen_pos;
 		public bool collision;
     }
 
@@ -734,8 +761,10 @@ public class Tray : MonoBehaviour
 			r.normalcam = center_is.Encode ("_normals");
 			r.finger_pos = finger.transform.position;
 			r.finger_rot = finger.transform.rotation.eulerAngles;
+			r.finger_screen_pos = centercam.WorldToScreenPoint (finger.transform.position);
 			r.target_pos = target.transform.position;
 			r.target_rot = target.transform.rotation.eulerAngles;
+			r.target_screen_pos = centercam.WorldToScreenPoint (target.transform.position);
 			r.collision = CollisionHappened;
 
 			// Debug.LogFormat ("Colission: {0}", CollisionHappened);
