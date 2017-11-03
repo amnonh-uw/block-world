@@ -767,8 +767,15 @@ public class Tray : MonoBehaviour
 			r.centercam = ScreenShot (centercam);
 			ImageSynthesis center_is = centercam.gameObject.GetComponent<ImageSynthesis> ();
 			r.depthcam = center_is.Encode ("_depth");
+			if (r.depthcam.Length == 0)
+				Debug.Log ("Error: failed to encode _depth");
 			r.multichanneldepthcam = center_is.Encode ("_depthmulti");
+			if (r.multichanneldepthcam.Length == 0)
+				Debug.Log ("Error: failed to encode _depthmulti");
 			r.normalcam = center_is.Encode ("_normals");
+			if (r.normalcam.Length == 0)
+				Debug.Log ("Error: failed to encode _normals");
+			
 			r.finger_pos = finger.transform.position;
 			r.finger_rot = finger.transform.rotation.eulerAngles;
 			r.finger_screen_pos = centercam.WorldToScreenPoint (finger.transform.position);
