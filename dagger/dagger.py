@@ -33,6 +33,20 @@ class Dagger:
         self.samples.append(sample)
         return sample
 
+    def learn_all_samples(self, save_file_name):
+        self.build_graph(self.policy_class)
+        samples = tf.train.match_filenames_once(self.dir_name + '/*.tfrecord')
+        dataset = self.policy.get_dataset(samples)
+        dataset = dataset.shuffle(tf.size(samples, out_type=tf.int64))
+
+        with tf.Session() as sess:
+            sess.run(tf.global_variables_initializer())
+            sess.run(tf.local_variables_initializer())
+            self.policy.policy_initializer()
+
+            self.train_step(dataset)
+
+
     def learn(self, save_file_name):
         self.build_graph(self.policy_class)
         self.expert_step()
@@ -44,14 +58,14 @@ class Dagger:
 
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
+            sess.run(tf.local_variables_initializer())
             self.policy.policy_initializer()
 
             for i in range(self.iterations):
                 print("DAgger iteration {}".format(i))
                 self.train_step()
+                self.save_policy(save_file_name)
                 self.test_step(iter=i+1)
-
-            self.save_policy(save_file_name)
 
         dagger_results = {'means': self.save_mean, 'stds': self.save_std, 'train_size': self.save_train_size,
                           'expert_mean': self.save_expert_mean, 'expert_std': self.save_expert_std}
@@ -127,19 +141,27 @@ class Dagger:
         print("expert mean return", self.save_expert_mean)
         print("expert std of return", self.save_expert_std)
 
-    def train_step(self):
-        sess = tf.get_default_session()
-        # do we need to reset adam at this point?
+    def train_dataset(self, dataset = None):
+        if dataset is None:
+            dataset = self.policy.get_dataset(self.samples)
+            dataset = dataset.shuffle(len(self.samples))
 
-        dataset = self.policy.get_dataset(self.samples)
-        dataset = dataset.shuffle(len(self.samples))
         dataset = dataset.repeat(self.train_epochs)
         dataset = dataset.batch(self.train_batch_size)
+        return dataset
 
-        iterator = dataset.make_one_shot_iterator()
+
+    def train_step(self, dataset = None):
+        dataset = self.train_dataset(dataset)
+        iterator = dataset.make_initializable_iterator()
         get_next = iterator.get_next()
 
         step = 0
+
+        sess = tf.get_default_session()
+        # do we need to reset adam at this point?
+
+        sess.run(iterator.initializer)
         while True:
             try:
                 obs_batch, positions_batch, action_batch = sess.run(get_next)

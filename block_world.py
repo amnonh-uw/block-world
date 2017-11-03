@@ -35,6 +35,9 @@ class BlockWorldEnv(gym.Env):
         self.reset_counter = 0
         self.step_counter = 0
 
+        self.width = 224
+        self.height = 224
+
         kwargs.pop("show_obs", None)
         kwargs.pop("reach_minimum", None)
         kwargs.pop("step_size", None)
