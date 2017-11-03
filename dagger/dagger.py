@@ -18,9 +18,6 @@ class Dagger:
         self.__dict__.update(kwargs)
         self.env = env
         self.policy_class = policy_class
-        self.obs_shape = env.obs_shape()
-        self.positions_shape = env.positions_shape()
-        self.act_shape = ()
 
         self.save_mean = []
         self.save_std = []
@@ -28,8 +25,9 @@ class Dagger:
 
         self.samples = []
 
-    def add_sample(self, observation, positions, action, phase=None, rollout=None, step=None):
-        sample = self.policy.save(observation, positions, action, phase, rollout, step)
+    def add_sample(self,  obs, action, phase=None, rollout=None, step=None):
+        obs['action'] = action
+        sample = self.policy.save(obs, phase, rollout, step)
         self.samples.append(sample)
         return sample
 
@@ -45,7 +43,6 @@ class Dagger:
             self.policy.policy_initializer()
 
             self.train_step(dataset)
-
 
     def learn(self, save_file_name):
         self.build_graph(self.policy_class)
@@ -78,12 +75,8 @@ class Dagger:
         self.load_policy(fname)
 
     def build_graph(self, policy_class):
-        self.images = tf.placeholder(tf.float32, name="images", shape=(None,) + self.obs_shape)
-        self.positions = tf.placeholder(tf.float32, name="positions", shape=(None,) + self.positions_shape)
-        self.action = tf.placeholder(tf.int32, name="action", shape=(None,) + self.act_shape)
-
         with tf.variable_scope("policy"):
-            self.policy = policy_class(self.images, self.positions, self.action, self.num_actions, self.dir_name)
+            self.policy = policy_class(self.num_actions, self.dir_name)
             self.action_hat = self.policy.get_output()
             self.loss = self.policy.get_loss()
             self.train_step_op = tf.train.AdamOptimizer().minimize(self.loss)
@@ -110,7 +103,6 @@ class Dagger:
 
         for i in range(self.num_rollouts):
             obs = self.env.reset()
-            positions = self.env.positions()
             done = False
             totalr = 0.
             steps = 0
@@ -119,11 +111,10 @@ class Dagger:
                 action = self.env.expert_action()
 
                 # data aggregation
-                path = self.add_sample(obs, positions, action, phase=0, rollout=i, step=steps)
+                path = self.add_sample(obs, action, phase=0, rollout=i, step=steps)
                 self.env.save_cams(path)
                 self.env.save_positions(path)
                 obs, r, done, _ = self.env.step(action)
-                positions = self.env.positions()
                 totalr += r
                 steps += 1
                 if self.render:
@@ -164,11 +155,10 @@ class Dagger:
         sess.run(iterator.initializer)
         while True:
             try:
-                obs_batch, positions_batch, action_batch = sess.run(get_next)
-                _, loss = sess.run([self.train_step_op, self.loss],
-                                   feed_dict={self.images: obs_batch,
-                                              self.positions : positions_batch,
-                                              self.action: action_batch})
+                batch = sess.run(get_next)
+                self.policy.print_batch(batch)
+                feed_dict = self.policy.loss_feed_dict(batch)
+                _, loss = sess.run([self.train_step_op, self.loss], feed_dict=feed_dict)
                 step += 1
                 if (step % self.train_report_frequency == 0):
                     print ("train step {} objective batch loss {}".format(step, loss))
@@ -182,19 +172,23 @@ class Dagger:
 
         for i in range(self.num_rollouts):
             obs = self.env.reset()
-            positions = self.env.positions()
             done = False
             totalr = 0.
             steps = 0
 
             while not done:
-                action = self.action_hat.eval(feed_dict={self.images: obs[None, :], self.positions : positions[None, :]})
+                feed_dict = self.policy.eval_feed_dict(obs)
+                # run policy
+
+                action = self.action_hat.eval(feed_dict=feed_dict)
                 expert_action = self.env.expert_action()
 
                 # data aggregation
-                path = self.add_sample(obs, positions, expert_action, phase=iter, rollout=i, step=steps)
+                path = self.add_sample(obs, expert_action, phase=iter, rollout=i, step=steps)
                 self.env.save_cams(path)
                 self.env.save_positions(path)
+
+                # take action from polocy
                 obs, r, done, _ = self.env.step(action)
                 positions = self.env.positions()
                 totalr += r

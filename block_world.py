@@ -46,23 +46,8 @@ class BlockWorldEnv(gym.Env):
 
         self.block_env = make_env(run=self.run, verbose=True, params_args=kwargs)
 
-    def obs_shape(self):
-        return (self.width, self.height, 4)
-
-    def positions_shape(self):
-        return (4,)
-
     def obs(self):
-        c = np.array(self.block_env.centercam)
-        c = c[:,:,:-1]
-        d = np.array(self.block_env.multichanneldepthcam)
-        d = np.expand_dims(d, axis=2)
-        return np.concatenate((c,d), axis=2).astype(np.float32)
-
-    def positions(self):
-        f = self.block_env.finger_screen_pos
-        t = self.block_env.target_screen_pos
-        return np.array([f[0], f[1], t[0], t[1]], dtype=np.float32)
+        return self.block_env.obs_dict()
 
     def target_reached(self):
         dist = abs(self.block_env.finger_pos - self.block_env.target_pos)

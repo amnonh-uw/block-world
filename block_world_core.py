@@ -243,15 +243,28 @@ class env:
         self.finger_rot = self.extract_vector3(data, "finger_rot")
         self.collision = self.extract_bool(data, "collision")
 
+    def obs_dict(self):
+        obs = dict()
+        obs['leftcam'] = self.leftcam
+        obs['rightcam'] = self.rightcam
+        obs['centercam'] = self.centercam
+        obs['multichanneldepthcam'] = self.multichanneldepthcam
+        obs['normalcam'] = self.normalcam
+        obs['target_pos'] = self.target_pos
+        obs['target_rot'] = self.target_rot
+        obs['target_screen_pos'] = self.target_screen_pos
+        obs['finger_pos'] = self.finger_pos
+        obs['finger_rot'] = self.finger_rot
+        obs['finger_screen_pos'] = self.finger_screen_pos
+
+        return obs
+
     def clean_split(self, s, delim):
         s = s.replace(" ", "")
         s = s.replace("(", "")
         s = s.replace(")", "")
 
         return s.split(delim)
-
-    def get_observation(self):
-        return np.concatenate((self.leftcam, self.rightcam), axis=2)
 
     def expert_action(self):
         dist = abs(self.finger_pos - self.target_pos)
