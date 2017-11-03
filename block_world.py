@@ -109,7 +109,11 @@ class BlockWorldEnv(gym.Env):
         else:
             inc_pos = self.map_discrete_action(discrete_action) * self.step_size
             self.block_env.move_finger(inc_pos)
-            reward = -1
+            if self.block_env.collision:
+                self.episode_ended = True
+                reward = -500
+            else:
+                reward = -1
 
         if self.step_counter > self.max_steps:
             self.episode_ended = True
