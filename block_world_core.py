@@ -207,6 +207,7 @@ class env:
         self.rightcam.save(path + 'right.png')
         self.centercam.save(path + 'center.png')
         self.depthcam.save(path + 'depth.png')
+        self.raw_multdepthcam.save(path + 'rawdepth.png')
         self.multichanneldepthcam.save(path + 'multdepth.tiff')
         self.normalcam.save(path + 'normals.png')
 
@@ -222,7 +223,7 @@ class env:
         # alpha channel is 255 for valid values (i.e. rendered objects vs infinity) 0 otherwise
 
         depth = source[:,:,0] + 256 * source[:,:,1]
-        depth[source[:,:,3] != 255] = 0
+        depth[source[:,:,3] != 255] = 256*256 - 1
         depth = depth.astype(np.uint16)
         depth_img = Image.fromarray(depth)
 
@@ -233,7 +234,8 @@ class env:
         self.rightcam = self.extract_cam(data, "rightcam")
         self.centercam = self.extract_cam(data, "centercam")
         self.depthcam = self.extract_cam(data, "depthcam")
-        self.multichanneldepthcam = self.decode_twochanneldepth(self.extract_cam(data, "multichanneldepthcam"))
+        self.raw_multdepthcam = self.extract_cam(data, "multichanneldepthcam")
+        self.multichanneldepthcam = self.decode_twochanneldepth(self.raw_multdepthcam)
         self.normalcam = self.extract_cam(data, "normalcam");
         self.target_pos = self.extract_vector3(data, "target_pos")
         self.finger_pos = self.extract_vector3(data, "finger_pos")
