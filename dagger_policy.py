@@ -43,6 +43,7 @@ class DaggerPolicy:
     @staticmethod
     def eval_sample_from_dict(sample_dict):
         img1 = sample_dict['centercam']
+        img1 = img1[:,:,3]
         img1 = img1 - vgg16_siamese.mean()
         img2 = sample_dict['multichanneldepthcam'] / (256.0 * 256.0)
         img2 = np.concatenate((img2, img2, img2), axis=2)
@@ -187,11 +188,7 @@ class DaggerPolicy:
             array_feature('finger_screen_pos', example_features)
             int64_feature('action', example_features)
 
-            print("Calling parse single example")
-
             features = tf.parse_single_example(serialized_example, features=example_features)
-
-            print("parse single example done")
 
             sample_dict = dict()
 
