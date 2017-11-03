@@ -46,11 +46,13 @@ class DaggerPolicy:
         img1 = np.asarray(img1)
         img1 = img1[:,:,0:3]
         img1 = img1 - vgg16_siamese.mean()
-        img2 = np.asarray(sample_dict['multichanneldepthcam'])ß / (256.0 * 256.0)
+        img2 = np.asarray(sample_dict['multichanneldepthcam'], dtype=np.float32) / (256.0 * 256.0)
         img2 = np.concatenate((img2, img2, img2), axis=2)
         pos1 = sample_dict['finger_screen_pos'][0:2]
         pos2 = sample_dict['target_screen_pos'][0: 2]
         positions = np.concatenate((pos1, pos2), axis=0)
+
+        return (img1, img2, positions)
 
     def loss_feed_dict(self, batch):
         return {
