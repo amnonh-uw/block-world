@@ -43,6 +43,7 @@ class DaggerPolicy:
     @staticmethod
     def eval_sample_from_dict(sample_dict):
         img1 = sample_dict['centercam']
+        img1 = np.asarray(img1)
         img1 = img1[:,:,3]
         img1 = img1 - vgg16_siamese.mean()
         img2 = sample_dict['multichanneldepthcam'] / (256.0 * 256.0)
