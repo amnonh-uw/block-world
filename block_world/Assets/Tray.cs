@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 using System.IO;
 using System.Text;
@@ -83,7 +84,16 @@ public class Tray : MonoBehaviour
 		string prefix = "http://*:" + port + "/";
         listener.Prefixes.Add(prefix);
 		Debug.Log ("Listening to " + prefix);
-        listener.Start();
+		try
+		{
+        	listener.Start();
+		}
+		catch (SocketException  ex)
+		{
+			Debug.Log ("can't listen to port");
+			Application.Quit ();
+		}
+
 
         listenerThread = new Thread(listenerMain);
         exitListener = false;
