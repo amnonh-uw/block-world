@@ -12,7 +12,6 @@ class Dagger:
         self.iterations = 50
         self.train_report_frequency = 1000
         self.max_steps = env.spec.timestep_limit
-        self.num_actions = env.action_space.n
         self.dir_name = None
 
         self.__dict__.update(kwargs)
@@ -76,15 +75,14 @@ class Dagger:
 
     def build_graph(self, policy_class):
         with tf.variable_scope("policy"):
-            self.policy = policy_class(self.num_actions, self.dir_name)
+            self.policy = policy_class(self.dir_name)
             self.action_hat = self.policy.get_output()
             self.loss = self.policy.get_loss()
             self.train_step_op = tf.train.AdamOptimizer().minimize(self.loss)
 
     def build_test_graph(self, policy_class):
-        self.x = tf.placeholder(tf.float32, shape=(None,) + self.obs_shape)
         with tf.variable_scope("policy"):
-            self.policy = policy_class(self.x, None, self.num_actions)
+            self.policy = policy_class(None)
             self.action_hat  = self.policy.get_output()
 
     def save_policy(self, fname):
@@ -190,7 +188,6 @@ class Dagger:
 
                 # take action from polocy
                 obs, r, done, _ = self.env.step(action)
-                positions = self.env.positions()
                 totalr += r
                 steps += 1
                 if self.render:

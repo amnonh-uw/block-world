@@ -268,19 +268,6 @@ class env:
 
         return s.split(delim)
 
-    def expert_action(self):
-        dist = abs(self.finger_pos - self.target_pos)
-        n = 0
-        for i in range(3):
-            n *= 3
-            if abs(dist[i] >= self.reach_minimum):
-                if dist[i] < 0:
-                    n += 1
-                else:
-                    n += 2
-        return n
-
-
 def env_test(argv):
     parser = argparse.ArgumentParser(description='block_world')
     parser.add_argument('--reset', dest='reset', action='store_true')

@@ -8,16 +8,15 @@ import PIL
 class DaggerPolicy:
     width = 224
     height = 224
-    def __init__(self,  num_actions, dir_name):
+    def __init__(self, dir_name):
         self.img1 = tf.placeholder(tf.float32, shape=[None, 224, 224, 3], name='img1')
         self.img2 = tf.placeholder(tf.float32, shape=[None, 224, 224, 3], name='img2')
         self.positions = tf.placeholder(tf.float32, shape=[None, 4], name='screen_positions')
-        self.action = tf.placeholder(tf.int32, name="action", shape=(None,))
-        self.num_actions = num_actions
+        self.action = tf.placeholder(tf.float32, name="action", shape=(None, 3))
 
         inputs = {'img1': self.img1, 'img2': self.img2, 'positions' : self.positions}
         self.base_network = vgg16_siamese(inputs)
-        self.logits = tf.layers.dense(inputs=self.base_network.get_output("dagger_fc9"), units=num_actions, activation=None, name='logits')
+        self.predicted_action = tf.layers.dense(inputs=self.base_network.get_output("dagger_fc9"), units=3, activation=None, name='predict_action')
 
         if dir_name:
             os.makedirs(dir_name, exist_ok=True)
@@ -31,8 +30,10 @@ class DaggerPolicy:
         img1 = tf.slice(sample_dict['centercam'], [0,0,0], [-1,-1,3])
         img1 = tf.cast(img1, tf.float32)
         img1 = img1 - vgg16_siamese.mean()
+        # img1 = tf.image.resize_images(img1, [224, 224])
         img2 = tf.cast(sample_dict['multichanneldepthcam'], tf.float32) / (256.0 * 256.0)
         img2 = tf.stack((img2, img2, img2), axis=2, name='stack_depth_channels')
+        # img1 = tf.image.resize_images(img2, [224, 224])
         pos1 = tf.slice(sample_dict['finger_screen_pos'],[0], [2])
         pos2 = tf.slice(sample_dict['target_screen_pos'], [0], [2])
         positions = tf.concat((pos1, pos2), axis=0, name='concat_positions')
@@ -43,11 +44,14 @@ class DaggerPolicy:
     @staticmethod
     def eval_sample_from_dict(sample_dict):
         img1 = sample_dict['centercam']
+        img1 = img1.resize([224, 224], PIL.Image.BILINEAR)
         img1 = np.asarray(img1)
         img1 = img1[:,:,0:3]
         img1 = img1 - vgg16_siamese.mean()
         img1 = np.expand_dims(img1, axis=0)
-        img2 = np.asarray(sample_dict['multichanneldepthcam'], dtype=np.float32) / (256.0 * 256.0)
+        img2 = sample_dict['multichanneldepthcam']
+        img2 = img2.resize([224, 224], PIL.Image.BILINEAR)
+        img2 = np.asarray(img2, dtype=np.float32) / (256.0 * 256.0)
         img2 = np.stack((img2, img2, img2), axis=2)
         img2 = np.expand_dims(img2, axis=0)
         pos1 = sample_dict['finger_screen_pos'][0:2]
@@ -95,11 +99,10 @@ class DaggerPolicy:
         pass
 
     def get_output(self):
-        return tf.argmax(self.logits, axis=1)
+        return self.action
 
     def get_loss(self):
-        onehot_labels = tf.one_hot(self.action, self.num_actions)
-        return tf.contrib.losses.softmax_cross_entropy(self.logits, onehot_labels)
+        return tf.losses.mean_squared_error(self.action, self.predicted_action)
 
     def policy_initializer(self):
         self.base_network.load('vgg16.npy', tf.get_default_session(), ignore_missing=True)
@@ -139,7 +142,7 @@ class DaggerPolicy:
             encode_vector('finger_pos', obs, feature)
             encode_vector('finger_rot', obs, feature)
             encode_vector('finger_screen_pos', obs, feature)
-            encode_int64('action', obs, feature)
+            encode_vector('action', obs, feature)
 
             return tf.train.Example(features=tf.train.Features(feature=feature))
 
@@ -192,7 +195,7 @@ class DaggerPolicy:
             array_feature('finger_pos', example_features)
             array_feature('finger_rot', example_features)
             array_feature('finger_screen_pos', example_features)
-            int64_feature('action', example_features)
+            array_feature('action', example_features)
 
             features = tf.parse_single_example(serialized_example, features=example_features)
 
@@ -209,7 +212,7 @@ class DaggerPolicy:
             decode_array('finger_pos', sample_dict, features, dtype=tf.float32)
             decode_array('finger_rot', sample_dict, features, dtype=tf.float32)
             decode_array('finger_screen_pos', sample_dict, features, dtype=tf.float32)
-            sample_dict['action'] = features['action']
+            decode_array('action', sample_dict, features, dtype=tf.float32)
 
             return self.train_sample_from_dict(sample_dict)
 

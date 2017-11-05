@@ -4,12 +4,6 @@ from block_world_core import env as make_env
 import tensorflow as tf
 
 class BlockWorldEnv(gym.Env):
-    class ObsSpace(gym.Space):
-        def __init__(self, width, height):
-            # center cam + depth cam
-            self.shape = tuple([width, height, 4])
-            self.dtype = tf.float32
-
     class ActionSpace(gym.Space):
         #
         # Actions are a vector of [-1,1],[-1,1],[-1,1]. Each colummn represents a movement in the x,y or z direction
@@ -35,9 +29,6 @@ class BlockWorldEnv(gym.Env):
         self.reset_counter = 0
         self.step_counter = 0
 
-        self.width = 224
-        self.height = 224
-
         kwargs.pop("show_obs", None)
         kwargs.pop("reach_minimum", None)
         kwargs.pop("step_size", None)
@@ -49,50 +40,27 @@ class BlockWorldEnv(gym.Env):
     def obs(self):
         return self.block_env.obs_dict()
 
+    def expert_action(self):
+        dist =  self.block_env.target_pos - self.block_env.finger_pos
+        return dist
+
     def target_reached(self):
         dist = abs(self.block_env.finger_pos - self.block_env.target_pos)
         return (dist > self.reach_minimum).sum() == 0
 
-    def expert_action(self):
-        dist = self.block_env.target_pos - self.block_env.finger_pos
-        act = 0
-        n = 1
-        for i in range(3):
-            if abs(dist[i]) >= self.reach_minimum:
-                if dist[i] > 0:
-                    act += 1 * n
-                else:
-                    act += 2 * n
-            n *= 3
-
-        return act
-
-    def map_discrete_action(self, n):
-        a = list()
-        for _ in range(3):
-            k = n % 3
-            n = n // 3
-            if k == 0:
-                a += [0]
-            if k == 1:
-                a += [1]
-            if k == 2:
-                a += [-1]
-
-        return np.array(a)
-
     def _step(self, action):
-        discrete_action = action
-        if discrete_action == 0:
-            self.episode_ended = True
-            if self.target_reached():
-                # Halelujah
-                reward = 1000
+        if abs(action[0]) < self.reach_minimum and \
+           abs(action[1]) < self.reach_minimum and \
+           abs(action[2]) < self.reach_minimum:
                 self.episode_ended = True
-            else:
-                reward = -1000
+                if self.target_reached():
+                    # Halelujah
+                    reward = 1000
+                    self.episode_ended = True
+                else:
+                    reward = -1000
         else:
-            inc_pos = self.map_discrete_action(discrete_action) * self.step_size
+            inc_pos = action
             self.block_env.move_finger(inc_pos)
             if self.block_env.collision:
                 self.episode_ended = True
@@ -118,6 +86,9 @@ class BlockWorldEnv(gym.Env):
         return self.obs()
 
     def _render(self, mode='human', close=False):
+        if close:
+            return
+
         if mode is 'human' or mode is '':
             print("target: " + str(self.block_env.target_pos) + " finger: " + str(self.block_env.finger_pos))
         else:
