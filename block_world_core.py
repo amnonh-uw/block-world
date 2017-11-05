@@ -93,6 +93,7 @@ class env:
 
         if type(args) is np.ndarray:
             args_arrstr = np.char.mod('%f', args)
+            print("args.arrstr is {}".format(args_arrstr))
             # combine to a string
             return ",".join(args_arrstr)
 
