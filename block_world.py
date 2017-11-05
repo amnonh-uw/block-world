@@ -49,22 +49,40 @@ class BlockWorldEnv(gym.Env):
         return (dist > self.reach_minimum).sum() == 0
 
     def _step(self, action):
-        if abs(action[0]) < self.reach_minimum and \
-           abs(action[1]) < self.reach_minimum and \
-           abs(action[2]) < self.reach_minimum:
+        def step_range(x):
+            if x > self.step_size:
+                return self.step_size
+            if x < -self.step_size:
+                return -self.step_size
+
+            return x
+
+        def not_visible(screen_pos):
+            width, height = self.block_env.centercam.size
+            if screen_pos[0] < 0.0 or screen_pos[0] >= width:
+                return True
+            if screen_pos[1] < 0.0 or screen_pos[0] >= height:
+                return True
+            return False
+
+        if (abs(action) < self.reach_minimum).sum() == 3:
+            self.episode_ended = True
+            if self.target_reached():
+                # Halelujah
+                reward = 1000
                 self.episode_ended = True
-                if self.target_reached():
-                    # Halelujah
-                    reward = 1000
-                    self.episode_ended = True
-                else:
-                    reward = -1000
+            else:
+                reward = -1000
         else:
-            inc_pos = action
+            inc_pos = np.array([step_range(x)  for x in action])
             self.block_env.move_finger(inc_pos)
             if self.block_env.collision:
                 self.episode_ended = True
                 reward = -500
+            elif not_visible(self.block_env.target_screen_pos):
+                reward = -1000
+            elif not_visible(self.block_env.finger_screen_pos):
+                reward = -1000
             else:
                 reward = -1
 

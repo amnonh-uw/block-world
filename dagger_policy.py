@@ -99,7 +99,7 @@ class DaggerPolicy:
         pass
 
     def get_output(self):
-        return self.action
+        return self.predicted_action
 
     def get_loss(self):
         return tf.losses.mean_squared_error(self.action, self.predicted_action)
