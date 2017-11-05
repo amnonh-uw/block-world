@@ -30,20 +30,23 @@ class Dagger:
         self.samples.append(sample)
         return sample
 
-    def learn_all_samples(self, save_file_name):
+    def learn_all_samples(self, save_file_name, load_file_name = None):
         self.build_graph(self.policy_class)
         samples = tf.train.match_filenames_once(self.dir_name + '/*.tfrecord')
         dataset = self.policy.get_dataset(samples)
         dataset = dataset.shuffle(tf.size(samples, out_type=tf.int64))
 
         with tf.Session() as sess:
-            sess.run(tf.global_variables_initializer())
-            sess.run(tf.local_variables_initializer())
-            self.policy.policy_initializer()
+            if load_file_name == None:
+                sess.run(tf.global_variables_initializer())
+                sess.run(tf.local_variables_initializer())
+                self.policy.policy_initializer()
+            else:
+                self.load_policy(load_file_name)
 
             self.train_step(dataset)
 
-    def learn(self, save_file_name):
+    def learn(self, save_file_name, load_file_name = None):
         self.build_graph(self.policy_class)
         self.expert_step()
 
@@ -53,9 +56,12 @@ class Dagger:
         self.save_train_size = []
 
         with tf.Session() as sess:
-            sess.run(tf.global_variables_initializer())
-            sess.run(tf.local_variables_initializer())
-            self.policy.policy_initializer()
+            if load_file_name == None:
+                sess.run(tf.global_variables_initializer())
+                sess.run(tf.local_variables_initializer())
+                self.policy.policy_initializer()
+            else:
+                self.load_policy(load_file_name)
 
             for i in range(self.iterations):
                 print("DAgger iteration {}".format(i))
