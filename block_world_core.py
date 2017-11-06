@@ -93,7 +93,6 @@ class env:
 
         if type(args) is np.ndarray:
             args_arrstr = np.char.mod('%f', args)
-            print("args.arrstr is {}".format(args_arrstr))
             # combine to a string
             return ",".join(args_arrstr)
 
@@ -203,14 +202,15 @@ class env:
         return(data[key])
 
     def save_cams(self, path):
-        path = path.replace(".tfrecord", '')
-        self.leftcam.save(path + 'left.png')
-        self.rightcam.save(path + 'right.png')
-        self.centercam.save(path + 'center.png')
-        self.depthcam.save(path + 'depth.png')
-        self.raw_multdepthcam.save(path + 'rawdepth.png')
-        self.multichanneldepthcam.save(path + 'multdepth.tiff')
-        self.normalcam.save(path + 'normals.png')
+        # path = path.replace(".tfrecord", '')
+        # self.leftcam.save(path + 'left.png')
+        # self.rightcam.save(path + 'right.png')
+        # self.centercam.save(path + 'center.png')
+        # self.depthcam.save(path + 'depth.png')
+        # self.raw_multdepthcam.save(path + 'rawdepth.png')
+        # self.multichanneldepthcam.save(path + 'multdepth.tiff')
+        # self.normalcam.save(path + 'normals.png')
+        pass
 
     def save_positions(self, path):
         path = path.replace(".tfrecord", '')
