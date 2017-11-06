@@ -26,8 +26,9 @@ class Dagger:
 
     def add_sample(self,  obs, action, phase=None, rollout=None, step=None):
         obs['action'] = action
-        sample = self.policy.save(obs, phase, rollout, step)
-        self.samples.append(sample)
+        sample = self.policy.save_sample(obs, phase, rollout, step)
+        if sample != None:
+            self.samples.append(sample)
         return sample
 
     def learn_all_samples(self, save_file_name, load_file_name = None):
@@ -37,9 +38,9 @@ class Dagger:
         dataset = dataset.shuffle(tf.size(samples, out_type=tf.int64))
 
         with tf.Session() as sess:
+            sess.run(tf.global_variables_initializer())
+            sess.run(tf.local_variables_initializer())
             if load_file_name == None:
-                sess.run(tf.global_variables_initializer())
-                sess.run(tf.local_variables_initializer())
                 self.policy.policy_initializer()
             else:
                 self.load_policy(load_file_name)
@@ -56,9 +57,9 @@ class Dagger:
         self.save_train_size = []
 
         with tf.Session() as sess:
+            sess.run(tf.global_variables_initializer())
+            sess.run(tf.local_variables_initializer())
             if load_file_name == None:
-                sess.run(tf.global_variables_initializer())
-                sess.run(tf.local_variables_initializer())
                 self.policy.policy_initializer()
             else:
                 self.load_policy(load_file_name)
@@ -67,6 +68,7 @@ class Dagger:
                 print("DAgger iteration {}".format(i))
                 self.train_step()
                 self.save_policy(save_file_name)
+                self.load_policy(save_file_name)
                 self.test_step(iter=i+1)
 
         dagger_results = {'means': self.save_mean, 'stds': self.save_std, 'train_size': self.save_train_size,
@@ -84,7 +86,7 @@ class Dagger:
             self.policy = policy_class(self.dir_name)
             self.action_hat = self.policy.get_output()
             self.loss = self.policy.get_loss()
-            self.train_step_op = tf.train.AdamOptimizer().minimize(self.loss)
+            self.train_step_op = tf.train.AdamOptimizer(learning_rate=1.0e-5).minimize(self.loss)
 
     def build_test_graph(self, policy_class):
         with tf.variable_scope("policy"):
@@ -92,14 +94,16 @@ class Dagger:
             self.action_hat  = self.policy.get_output()
 
     def save_policy(self, fname):
+        print("saving {}".format(fname))
         fname += "/"
         os.makedirs(os.path.dirname(fname), exist_ok=True)
-        saver = tf.train.Saver(tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope="policy"))
+        saver = tf.train.Saver(tf.trainable_variables())
         saver.save(tf.get_default_session(), fname)
 
     def load_policy(self, fname):
+        print("loading {}".format(fname))
         fname += "/"
-        saver = tf.train.Saver()
+        saver = tf.train.Saver(tf.trainable_variables())
         saver.restore(tf.get_default_session(), fname)
 
     def expert_step(self):
@@ -116,8 +120,9 @@ class Dagger:
 
                 # data aggregation
                 path = self.add_sample(obs, action, phase=0, rollout=i, step=steps)
-                self.env.save_cams(path)
-                self.env.save_positions(path)
+                if path is not None:
+                    self.env.save_cams(path)
+                    self.env.save_positions(path)
                 obs, r, done, _ = self.env.step(action)
                 totalr += r
                 steps += 1
@@ -185,12 +190,14 @@ class Dagger:
                 # run policy
 
                 action = self.action_hat.eval(feed_dict=feed_dict)
+                action = np.squeeze(action)
                 expert_action = self.env.expert_action()
 
                 # data aggregation
                 path = self.add_sample(obs, expert_action, phase=iter, rollout=i, step=steps)
-                self.env.save_cams(path)
-                self.env.save_positions(path)
+                if path is not None:
+                    self.env.save_cams(path)
+                    self.env.save_positions(path)
 
                 # take action from polocy
                 obs, r, done, _ = self.env.step(action)
