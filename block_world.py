@@ -81,8 +81,10 @@ class BlockWorldEnv(gym.Env):
                 reward = -500
             elif not_visible(self.block_env.target_screen_pos):
                 reward = -1000
+                self.episode_ended = True
             elif not_visible(self.block_env.finger_screen_pos):
                 reward = -1000
+                self.episode_ended = True
             else:
                 reward = -1
 
