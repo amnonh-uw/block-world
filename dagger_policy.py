@@ -9,14 +9,19 @@ class DaggerPolicy:
     width = 224
     height = 224
     def __init__(self, dir_name):
-        self.img1 = tf.placeholder(tf.float32, shape=[None, 224, 224, 3], name='img1')
-        self.img2 = tf.placeholder(tf.float32, shape=[None, 224, 224, 3], name='img2')
-        self.positions = tf.placeholder(tf.float32, shape=[None, 4], name='screen_positions')
+        # self.img1 = tf.placeholder(tf.float32, shape=[None, 224, 224, 3], name='img1')
+        # self.img2 = tf.placeholder(tf.float32, shape=[None, 224, 224, 3], name='img2')
+        self.positions = tf.placeholder(tf.float32, shape=[None, 8], name='screen_positions')
         self.action = tf.placeholder(tf.float32, name="action", shape=(None, 3))
 
-        inputs = {'img1': self.img1, 'img2': self.img2, 'positions' : self.positions}
-        self.base_network = vgg16_siamese(inputs)
-        self.predicted_action = tf.layers.dense(inputs=self.base_network.get_output("dagger_fc9"), units=3, activation=None, name='predict_action')
+        # inputs = {'img1': self.img1, 'img2': self.img2, 'positions' : self.positions}
+        # self.base_network = vgg16_siamese(inputs)
+        l1 = tf.contrib.layers.fully_connected(inputs=self.positions, num_outputs=256)
+        l2 = tf.contrib.layers.fully_connected(inputs=l1, num_outputs=256)
+        l3 = tf.contrib.layers.fully_connected(inputs=l2, num_outputs=256)
+        l4 = tf.contrib.layers.fully_connected(inputs=l3, num_outputs=256, activation_fn=None)
+        self.predicted_action = tf.contrib.layers.fully_connected(inputs=l4, num_outputs=3, activation_fn=None)
+        # self.predicted_action = tf.layers.dense(inputs=self.base_network.get_output("dagger_fc9"), units=3, activation=None, name='predict_action')
 
         if dir_name:
             os.makedirs(dir_name, exist_ok=True)
@@ -27,75 +32,81 @@ class DaggerPolicy:
 
     @staticmethod
     def train_sample_from_dict(sample_dict):
-        img1 = tf.slice(sample_dict['centercam'], [0,0,0], [-1,-1,3])
-        img1 = tf.cast(img1, tf.float32)
-        img1 = img1 - vgg16_siamese.mean()
+        img1 = sample_dict['centercam']
+        # img1 = tf.slice(sample_dict['centercam'], [0,0,0], [-1,-1,3])
+        # img1 = tf.cast(img1, tf.float32)
+        # img1 = img1 - vgg16_siamese.mean()
         # img1 = tf.image.resize_images(img1, [224, 224])
-        img2 = tf.cast(sample_dict['multichanneldepthcam'], tf.float32) / (256.0 * 256.0)
-        img2 = tf.stack((img2, img2, img2), axis=2, name='stack_depth_channels')
+        img2 = sample_dict['multichanneldepthcam']
+        # img2 = tf.cast(sample_dict['multichanneldepthcam'], tf.float32) / (256.0 * 256.0)
+        # img2 = tf.stack((img2, img2, img2), axis=2, name='stack_depth_channels')
         # img1 = tf.image.resize_images(img2, [224, 224])
-        pos1 = tf.slice(sample_dict['finger_screen_pos'],[0], [2])
-        pos2 = tf.slice(sample_dict['target_screen_pos'], [0], [2])
-        positions = tf.concat((pos1, pos2), axis=0, name='concat_positions')
+        # pos1 = tf.slice(sample_dict['finger_screen_pos'],[0], [3])
+        # pos2 = tf.slice(sample_dict['target_screen_pos'], [0], [3])
+        pos1 = sample_dict['finger_screen_pos']
+        pos2 = sample_dict['target_screen_pos']
+        pos3 = np.array([224, 224])
+        positions = tf.concat((pos1, pos2, pos3), axis=0, name='concat_positions')
         action = sample_dict['action']
 
-        return (img1, img2,positions, action)
+        return (positions,img1, img2, action)
 
     @staticmethod
     def eval_sample_from_dict(sample_dict):
         img1 = sample_dict['centercam']
-        img1 = img1.resize([224, 224], PIL.Image.BILINEAR)
-        img1 = np.asarray(img1)
-        img1 = img1[:,:,0:3]
-        img1 = img1 - vgg16_siamese.mean()
-        img1 = np.expand_dims(img1, axis=0)
+        # img1 = img1.resize([224, 224], PIL.Image.BILINEAR)
+        # img1 = np.asarray(img1)
+        # img1 = img1[:,:,0:3]
+        # img1 = img1 - vgg16_siamese.mean()
+        # img1 = np.expand_dims(img1, axis=0)
         img2 = sample_dict['multichanneldepthcam']
-        img2 = img2.resize([224, 224], PIL.Image.BILINEAR)
-        img2 = np.asarray(img2, dtype=np.float32) / (256.0 * 256.0)
-        img2 = np.stack((img2, img2, img2), axis=2)
-        img2 = np.expand_dims(img2, axis=0)
-        pos1 = sample_dict['finger_screen_pos'][0:2]
-        pos2 = sample_dict['target_screen_pos'][0: 2]
-        positions = np.concatenate((pos1, pos2), axis=0)
+        # img2 = img2.resize([224, 224], PIL.Image.BILINEAR)
+        # img2 = np.asarray(img2, dtype=np.float32) / (256.0 * 256.0)
+        # img2 = np.stack((img2, img2, img2), axis=2)
+        # img2 = np.expand_dims(img2, axis=0)
+        pos1 = sample_dict['finger_screen_pos']
+        pos2 = sample_dict['target_screen_pos']
+        pos3 = np.array([224, 224])
+        positions = np.concatenate((pos1, pos2, pos3), axis=0)
         positions = np.expand_dims(positions, axis=0)
 
-        return (img1, img2, positions)
+        return (positions, img1, img2)
 
     def loss_feed_dict(self, batch):
         return {
-            self.img1: batch[0],
-            self.img2: batch[1],
-            self.positions: batch[2],
+            # self.img1: batch[0],
+            # self.img2: batch[1],
+            self.positions: batch[0],
             self.action: batch[3]}
 
     def eval_feed_dict(self, obs_dict):
         sample = self.eval_sample_from_dict(obs_dict)
         return {
-            self.img1: sample[0],
-            self.img2: sample[1],
-            self.positions: sample[2]
+            # self.img1: sample[0],
+            # self.img2: sample[1],
+            self.positions: sample[0]
         }
 
     def print_batch(self, batch):
-        # print("printintg batch")
-        # img1 = batch[0]
-        # img2 = batch[1]
-        # positions = batch[2]
-        # actions = batch[3]
-        # for i in range(actions.shape[0]):
-        #     print("positions {} action {}".format(positions[i,:], actions[i]))
-        #     c = img1[i, :, :, :] + vgg16_siamese.mean()
-        #     c = c.astype(np.uint8)
-        #     print("image from array shape {} dtype {}".format(c.shape, c.dtype))
-        #     c_i = Image.fromarray(c)
-        #     c_i.save('center' + str(i) + '.png')
-        #     d = img2[i, :, :, 0]
-        #     d = d * 256.0 * 256.0
-        #     d = d.astype(np.uint16)
-        #     print(d.shape)
-        #     print(d.dtype)
-        #     d_i = Image.fromarray(d)
-        #     d_i.save('depth' + str(i) + '.tiff')
+        def print_pos(name, x, y, z):
+            if abs(z) < 0.1:
+                print("close sample for {} {} {} {}", name, x, y, z)
+
+        positions = batch[0]
+        img1s = batch[1]
+        img2s = batch[2]
+        for i in range(positions.shape[0]):
+            x = positions[i, 0]
+            y = positions[i, 1]
+            z = positions[i, 2]
+            print_pos('target', x, y, z)
+            x = positions[i, 3]
+            y = positions[i, 4]
+            z = positions[i, 5]
+            print_pos('finger', x, y, z)
+
+
+
         pass
 
     def get_output(self):
@@ -105,9 +116,40 @@ class DaggerPolicy:
         return tf.losses.mean_squared_error(self.action, self.predicted_action)
 
     def policy_initializer(self):
-        self.base_network.load('vgg16.npy', tf.get_default_session(), ignore_missing=True)
+        # self.base_network.load('vgg16.npy', tf.get_default_session(), ignore_missing=True)
+        pass
 
-    def save(self, sample_dict, phase = None, rollout=None, step=None):
+    def invalid_sample(self, sample_dict):
+        def invalid_pos(x, y, z, width, height):
+            if x < 0.0 or x >= width:
+                return True
+            if y < 0.0 or y >= height:
+                return True
+
+            if abs(z) < 0.1:
+                return True
+
+            return False
+
+        pos1 = sample_dict['finger_screen_pos']
+        pos2 = sample_dict['target_screen_pos']
+        width, height = sample_dict['centercam'].size
+
+        if invalid_pos(pos1[0], pos1[1], pos1[2], width, height):
+            print("rejecting sample finger {}".format(pos1))
+            return True
+
+        if invalid_pos(pos2[0], pos2[1], pos2[2], width, height):
+            print("rejecting sample target {}".format(pos2))
+            return True
+
+        return False
+
+
+
+    def save_sample(self, sample_dict, phase = None, rollout=None, step=None):
+        if self.invalid_sample(sample_dict):
+            return None
         def int64_feature(value):
             return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
