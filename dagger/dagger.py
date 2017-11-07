@@ -11,6 +11,7 @@ class Dagger:
         self.epochs = 10
         self.iterations = 50
         self.report_frequency = 1000
+        self.save_frequency = 5000
         self.max_steps = env.spec.timestep_limit
         self.dir_name = None
         self.max_samples = None
@@ -33,6 +34,7 @@ class Dagger:
         return sample
 
     def learn_all_samples(self, save_file_name, load_file_name = None):
+        self.save_file_name = save_file_name
         self.build_graph(self.policy_class)
         samples = tf.train.match_filenames_once(self.dir_name + '/*.tfrecord')
         if self.max_samples is not None:
@@ -49,8 +51,10 @@ class Dagger:
                 self.load_policy(load_file_name)
 
             self.train_step(dataset)
+            self.save_policy(save_file_name)
 
     def learn(self, save_file_name, load_file_name = None):
+        self.save_file_name = save_file_name
         self.build_graph(self.policy_class)
         self.expert_step()
 
@@ -173,6 +177,10 @@ class Dagger:
                 step += 1
                 if (step % self.report_frequency == 0):
                     print ("train step {} objective batch loss {}".format(step, loss))
+
+                if (step % self.save_frequency == 0):
+                    self.save_policy(self.save_file_name)
+
             except tf.errors.OutOfRangeError:
                 break
 
