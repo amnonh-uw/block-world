@@ -35,9 +35,9 @@ class DaggerPolicy:
         img1 = tf.cast(img1, tf.float32)
         img1 = img1 - vgg16_siamese.mean()
         # img1 = tf.image.resize_images(img1, [224, 224])
-        img2 = sample_dict['multichanneldepthcam']
-        img2 = tf.cast(img2, tf.float32) / (256.0 * 256.0)
-        img2 = tf.stack((img2, img2, img2), axis=2, name='stack_depth_channels')
+        # img2 = sample_dict['multichanneldepthcam']
+        # img2 = tf.cast(img2, tf.float32) / (256.0 * 256.0)
+        # img2 = tf.stack((img2, img2, img2), axis=2, name='stack_depth_channels')
         # img2 = tf.image.resize_images(img2, [224, 224])
         pos1 = tf.slice(sample_dict['finger_screen_pos'],[0], [2])
         pos2 = tf.slice(sample_dict['target_screen_pos'], [0], [2])
@@ -57,25 +57,23 @@ class DaggerPolicy:
         img1 = img1[:,:,0:3]
         img1 = img1 - vgg16_siamese.mean()
         img1 = np.expand_dims(img1, axis=0)
-        img2 = sample_dict['multichanneldepthcam']
+        # img2 = sample_dict['multichanneldepthcam']
         # img2 = img2.resize([224, 224], PIL.Image.BILINEAR)
-        img2 = np.asarray(img2, dtype=np.float32) / (256.0 * 256.0)
-        img2 = np.stack((img2, img2, img2), axis=2)
-        img2 = np.expand_dims(img2, axis=0)
+        # img2 = np.asarray(img2, dtype=np.float32) / (256.0 * 256.0)
+        # img2 = np.stack((img2, img2, img2), axis=2)
+        # img2 = np.expand_dims(img2, axis=0)
 
-        return (img1, img2)
+        return (img1,)
 
     def loss_feed_dict(self, batch):
         return {
             self.img1: batch[0],
-            self.img2: batch[1],
             self.positions: batch[2]}
 
     def eval_feed_dict(self, obs_dict):
         sample = self.eval_sample_from_dict(obs_dict)
         return {
-            self.img1: sample[0],
-            self.img2: sample[1]
+            self.img1: sample[0]
         }
 
 
@@ -370,10 +368,10 @@ class vgg16_siamese(Network):
           # combine towers
         (self.feed('fc7', 'fc7_p')
          .concat(1, name='combined_fc7')
-         .fc(256, name="dagger_fc8")
-         .fc(256, name="dagger_fc9")
-         .fc(256, name="dagger_fc10")
-         .fc(256, name="final"))
+         .fc(1024, name="dagger_fc8")
+         .fc(1024, name="dagger_fc9")
+         .fc(1024, name="dagger_fc10")
+         .fc(1024, name="final"))
 
     @staticmethod
     def mean():
