@@ -1,0 +1,21 @@
+import sys
+import argparse
+
+def get_args(argv):
+    parser = argparse.ArgumentParser(description='block_world')
+    parser.add_argument('--show-obs', dest='show_obs', action='store_true')
+    parser.add_argument('--no-show-obs', dest='show_obs', action='store_false')
+    parser.add_argument('--run', dest='run', action='store_true')
+    parser.add_argument('--no-run', dest='run', action='store_false')
+    parser.add_argument('--reach-minimum', type=float, default=0.1)
+    parser.add_argument('--num-rolloutsm', type=int, default=25)
+    parser.add_argument('--batch-size', type=int, default=25)
+    parser.add_argument('--epochs', type=int, default=20)
+    parser.add_argument('--iterations', type=int, default = 20)
+    parser.add_argument('--report_frequency', type=int, default=10)
+    parser.add_argument('--dir-name', type=str, default='tmp_storage')
+    parser.add_argument('--max-samples', type=str, default=None)
+    parser.set_defaults(show_obs=False)
+    parser.set_defaults(run=True)
+
+    return parser.parse_args(argv)
