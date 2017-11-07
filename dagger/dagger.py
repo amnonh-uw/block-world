@@ -7,12 +7,13 @@ class Dagger:
     def __init__(self, env, policy_class, **kwargs):
         self.render = True
         self.num_rollouts = 25
-        self.train_batch_size = 25
-        self.train_epochs = 10
+        self.batch_size = 25
+        self.epochs = 10
         self.iterations = 50
-        self.train_report_frequency = 1000
+        self.report_frequency = 1000
         self.max_steps = env.spec.timestep_limit
         self.dir_name = None
+        self.max_samples = None
 
         self.__dict__.update(kwargs)
         self.env = env
@@ -34,6 +35,8 @@ class Dagger:
     def learn_all_samples(self, save_file_name, load_file_name = None):
         self.build_graph(self.policy_class)
         samples = tf.train.match_filenames_once(self.dir_name + '/*.tfrecord')
+        if self.max_samples is not None:
+            samples = samples[0:self.max_steps]
         dataset = self.policy.get_dataset(samples)
         dataset = dataset.shuffle(tf.size(samples, out_type=tf.int64))
 
@@ -122,7 +125,6 @@ class Dagger:
                 path = self.add_sample(obs, action, phase=0, rollout=i, step=steps)
                 if path is not None:
                     self.env.save_cams(path)
-                    self.env.save_positions(path)
                 obs, r, done, _ = self.env.step(action)
                 totalr += r
                 steps += 1
@@ -146,8 +148,8 @@ class Dagger:
             dataset = self.policy.get_dataset(self.samples)
             dataset = dataset.shuffle(len(self.samples))
 
-        dataset = dataset.repeat(self.train_epochs)
-        dataset = dataset.batch(self.train_batch_size)
+        dataset = dataset.repeat(self.epochs)
+        dataset = dataset.batch(self.batch_size)
         return dataset
 
 
@@ -169,7 +171,7 @@ class Dagger:
                 feed_dict = self.policy.loss_feed_dict(batch)
                 _, loss = sess.run([self.train_step_op, self.loss], feed_dict=feed_dict)
                 step += 1
-                if (step % self.train_report_frequency == 0):
+                if (step % self.report_frequency == 0):
                     print ("train step {} objective batch loss {}".format(step, loss))
             except tf.errors.OutOfRangeError:
                 break
@@ -197,9 +199,8 @@ class Dagger:
                 path = self.add_sample(obs, expert_action, phase=iter, rollout=i, step=steps)
                 if path is not None:
                     self.env.save_cams(path)
-                    self.env.save_positions(path)
 
-                # take action from polocy
+                # take action from policy
                 obs, r, done, _ = self.env.step(action)
                 totalr += r
                 steps += 1
