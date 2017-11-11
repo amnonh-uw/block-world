@@ -2,7 +2,7 @@ import sys
 from args import get_args
 from block_world import BlockWorldEnv as make
 from dagger import Dagger
-from dagger_policy_nets import DaggerPolicy
+from dagger_policy_loc import DaggerPolicy
 
 def main(argv):
     env = make(run=False)
