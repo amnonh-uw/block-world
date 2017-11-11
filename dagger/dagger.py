@@ -86,29 +86,30 @@ class Dagger:
 
     def test(self, load_file_name):
         self.build_test_graph(self.policy_class)
-        self.load_policy(load_file_name)
+        with tf.Session() as sess:
+            self.load_policy(load_file_name)
 
-        for i in range(self.num_rollouts):
-            obs = self.env.reset()
-            done = False
-            totalr = 0.
-            steps = 0
+            for i in range(self.num_rollouts):
+                obs = self.env.reset()
+                done = False
+                totalr = 0.
+                steps = 0
 
-            while not done:
-                feed_dict = self.policy.eval_feed_dict(obs)
-                # run policy
+                while not done:
+                    feed_dict = self.policy.eval_feed_dict(obs)
+                    # run policy
 
-                action = self.action_hat.eval(feed_dict=feed_dict)
-                action = np.squeeze(action)
-                self.policy.print_results(obs, action)
+                    action = self.action_hat.eval(feed_dict=feed_dict)
+                    action = np.squeeze(action)
+                    self.policy.print_results(obs, action)
 
-                action = self.env.expert_action()
-                obs, r, done, _ = self.env.step(action)
-                totalr += r
-                steps += 1
+                    action = self.env.expert_action()
+                    obs, r, done, _ = self.env.step(action)
+                    totalr += r
+                    steps += 1
 
-                if steps >= self.max_steps:
-                    break
+                    if steps >= self.max_steps:
+                        break
 
     def build_graph(self, policy_class):
         with tf.variable_scope("policy"):
