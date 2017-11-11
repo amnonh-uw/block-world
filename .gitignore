@@ -9,6 +9,8 @@ __pycache__
 *.userprefs
 *.data
 *.idx
+*.png
+*.tiff
 Dockerfile
 baselines/*
 block_world/Library
