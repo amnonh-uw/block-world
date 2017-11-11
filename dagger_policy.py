@@ -11,7 +11,7 @@ class DaggerPolicy:
     def __init__(self, dir_name):
         # self.img1 = tf.placeholder(tf.float32, shape=[None, 224, 224, 3], name='img1')
         # self.img2 = tf.placeholder(tf.float32, shape=[None, 224, 224, 3], name='img2')
-        self.positions = tf.placeholder(tf.float32, shape=[None, 8], name='screen_positions')
+        self.positions = tf.placeholder(tf.float32, shape=[None, 6], name='screen_positions')
         self.action = tf.placeholder(tf.float32, name="action", shape=(None, 3))
 
         # inputs = {'img1': self.img1, 'img2': self.img2, 'positions' : self.positions}
@@ -31,7 +31,17 @@ class DaggerPolicy:
             self.path = None
 
     @staticmethod
+    def print_results(obs, action):
+        pos1 = obs['finger_pos']
+        pos2 = obs['target_pos']
+
+        print('finger_pos {} target_pos {} action {}'.format(pos1, pos2, action))
+
+    @staticmethod
     def train_sample_from_dict(sample_dict):
+        #
+        # This method must use tensorflow primitives
+        #
         img1 = sample_dict['centercam']
         # img1 = tf.slice(sample_dict['centercam'], [0,0,0], [-1,-1,3])
         # img1 = tf.cast(img1, tf.float32)
@@ -45,14 +55,17 @@ class DaggerPolicy:
         # pos2 = tf.slice(sample_dict['target_screen_pos'], [0], [3])
         pos1 = sample_dict['finger_screen_pos']
         pos2 = sample_dict['target_screen_pos']
-        pos3 = np.array([224, 224])
-        positions = tf.concat((pos1, pos2, pos3), axis=0, name='concat_positions')
+
+        positions = tf.concat((pos1, pos2), axis=0, name='concat_positions')
         action = sample_dict['action']
 
         return (positions,img1, img2, action)
 
     @staticmethod
     def eval_sample_from_dict(sample_dict):
+        #
+        # this method must use numpy primitives
+        #
         img1 = sample_dict['centercam']
         # img1 = img1.resize([224, 224], PIL.Image.BILINEAR)
         # img1 = np.asarray(img1)
@@ -66,8 +79,7 @@ class DaggerPolicy:
         # img2 = np.expand_dims(img2, axis=0)
         pos1 = sample_dict['finger_screen_pos']
         pos2 = sample_dict['target_screen_pos']
-        pos3 = np.array([224, 224])
-        positions = np.concatenate((pos1, pos2, pos3), axis=0)
+        positions = np.concatenate((pos1, pos2), axis=0)
         positions = np.expand_dims(positions, axis=0)
 
         return (positions, img1, img2)
@@ -88,25 +100,6 @@ class DaggerPolicy:
         }
 
     def print_batch(self, batch):
-        def print_pos(name, x, y, z):
-            if abs(z) < 0.1:
-                print("close sample for {} {} {} {}", name, x, y, z)
-
-        positions = batch[0]
-        img1s = batch[1]
-        img2s = batch[2]
-        for i in range(positions.shape[0]):
-            x = positions[i, 0]
-            y = positions[i, 1]
-            z = positions[i, 2]
-            print_pos('target', x, y, z)
-            x = positions[i, 3]
-            y = positions[i, 4]
-            z = positions[i, 5]
-            print_pos('finger', x, y, z)
-
-
-
         pass
 
     def get_output(self):
@@ -144,8 +137,6 @@ class DaggerPolicy:
             return True
 
         return False
-
-
 
     def save_sample(self, sample_dict, phase = None, rollout=None, step=None):
         if self.invalid_sample(sample_dict):
@@ -263,7 +254,6 @@ class DaggerPolicy:
         else:
             dataset = tf.contrib.data.TFRecordDataset(samples)
             return dataset.map(tfrecord_map)
-
 
 class vgg16_siamese(Network):
     def __init__(self, inputs, trainable=True):
