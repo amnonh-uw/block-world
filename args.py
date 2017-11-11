@@ -19,3 +19,16 @@ def get_args(argv):
     parser.set_defaults(run=True)
 
     return parser.parse_args(argv)
+
+def env_args():
+    args = argparse.Namespace()
+    
+    args.tray_length=3.0
+    args.tray_width=2.0
+    args.stereo_distance=0.5
+    args.step_size = 0.1
+    args.reach_minimum = 0.1
+    args.verbose = True
+    args.run = True
+
+    return args
