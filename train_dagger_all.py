@@ -1,18 +1,17 @@
 import sys
-import imp
+from importlib import import_module
 from args import get_args
-from block_world import BlockWorldEnv as make
 from dagger import Dagger
-from dagger_policy_conv import DaggerPolicy
 
 def main(argv):
     args = get_args(argv)
 
     print(args)
-    policy = imp.load_source("DaggerPolicy", args.policy_source)
+    policy_mod = import_module(args.policy_source)
+    policy = getattr(policy_mod, 'DaggerPolicy')
 
     dagger = Dagger(None,
-                    policy.DaggerPolicy,
+                    policy,
                    **vars(args))
 
     # dagger.learn_all_samples(save_file_name="dagger_block_world", load_file_name="dagger_block_world")
