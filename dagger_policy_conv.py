@@ -15,14 +15,11 @@ class DaggerPolicy:
                             weights_initializer=tf.truncated_normal_initializer(0.0, 0.01),
                             weights_regularizer=slim.l2_regularizer(0.0005)):
 
-            conv1 = slim.conv2d(self.img1, 8, [3, 3], padding='VALID', scope='conv1')
-            conv2 = slim.conv2d(self.img1, 8, [5, 5], padding='VALID', scope='conv2')
+            conv1 = slim.conv2d(self.img1, 64, [3, 3], padding='VALID', scope='conv1')
+            conv2 = slim.conv2d(conv1, 64, [3, 3], padding='VALID', scope='conv2')
             flat1 = slim.flatten(conv1)
-            flat2 = slim.flatten(conv2)
-            fc1 = slim.fully_connected(flat1, 64, scope='fc1')
-            fc2 = slim.fully_connected(flat2, 64, scope='fc2')
-            fc12 = tf.concat([fc1, fc2], axis=1)
-            self.predicted_positions = slim.fully_connected(fc12, 4, scope='fc')
+            fc1 = slim.fully_connected(flat1, 128, scope='fc1')
+            self.predicted_positions = slim.fully_connected(fc1, 4, scope='fc')
 
         if dir_name:
             os.makedirs(dir_name, exist_ok=True)
