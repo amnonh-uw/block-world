@@ -15,6 +15,8 @@ def get_args(argv):
     parser.add_argument('--report_frequency', type=int, default=10)
     parser.add_argument('--dir-name', type=str, default='tmp_storage')
     parser.add_argument('--max-samples', type=str, default=None)
+    parser.add_argument('--policy-source', type=str, default='dagger_policy.py')
+    parser.add_argument('--save-file-name', type=str, default="dagger_block_world")
     parser.set_defaults(show_obs=False)
     parser.set_defaults(run=True)
 

@@ -12,7 +12,8 @@ class Dagger:
         self.iterations = 50
         self.report_frequency = 1000
         self.save_frequency = 5000
-        self.max_steps = env.spec.timestep_limit
+        if env is not None:
+            self.max_steps = env.spec.timestep_limit
         self.dir_name = None
         self.max_samples = None
 
@@ -33,8 +34,9 @@ class Dagger:
             self.samples.append(sample)
         return sample
 
-    def learn_all_samples(self, save_file_name, load_file_name = None):
-        self.save_file_name = save_file_name
+    def learn_all_samples(self, save_file_name = None, load_file_name = None):
+        if save_file_name is not None:
+            self.save_file_name = save_file_name
         self.build_graph(self.policy_class)
         samples = tf.train.match_filenames_once(self.dir_name + '/*.tfrecord')
         if self.max_samples is not None:

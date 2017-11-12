@@ -9,19 +9,14 @@ class DaggerPolicy:
     width = 224
     height = 224
     def __init__(self, dir_name):
-        # self.img1 = tf.placeholder(tf.float32, shape=[None, 224, 224, 3], name='img1')
-        # self.img2 = tf.placeholder(tf.float32, shape=[None, 224, 224, 3], name='img2')
         self.positions = tf.placeholder(tf.float32, shape=[None, 6], name='screen_positions')
         self.action = tf.placeholder(tf.float32, name="action", shape=(None, 3))
 
-        # inputs = {'img1': self.img1, 'img2': self.img2, 'positions' : self.positions}
-        # self.base_network = vgg16_siamese(inputs)
         l1 = tf.contrib.layers.fully_connected(inputs=self.positions, num_outputs=256)
         l2 = tf.contrib.layers.fully_connected(inputs=l1, num_outputs=256)
         l3 = tf.contrib.layers.fully_connected(inputs=l2, num_outputs=256)
         l4 = tf.contrib.layers.fully_connected(inputs=l3, num_outputs=256, activation_fn=None)
         self.predicted_action = tf.contrib.layers.fully_connected(inputs=l4, num_outputs=3, activation_fn=None)
-        # self.predicted_action = tf.layers.dense(inputs=self.base_network.get_output("dagger_fc9"), units=3, activation=None, name='predict_action')
 
         if dir_name:
             os.makedirs(dir_name, exist_ok=True)
@@ -42,60 +37,35 @@ class DaggerPolicy:
         #
         # This method must use tensorflow primitives
         #
-        img1 = sample_dict['centercam']
-        # img1 = tf.slice(sample_dict['centercam'], [0,0,0], [-1,-1,3])
-        # img1 = tf.cast(img1, tf.float32)
-        # img1 = img1 - vgg16_siamese.mean()
-        # img1 = tf.image.resize_images(img1, [224, 224])
-        img2 = sample_dict['multichanneldepthcam']
-        # img2 = tf.cast(sample_dict['multichanneldepthcam'], tf.float32) / (256.0 * 256.0)
-        # img2 = tf.stack((img2, img2, img2), axis=2, name='stack_depth_channels')
-        # img1 = tf.image.resize_images(img2, [224, 224])
-        # pos1 = tf.slice(sample_dict['finger_screen_pos'],[0], [3])
-        # pos2 = tf.slice(sample_dict['target_screen_pos'], [0], [3])
         pos1 = sample_dict['finger_screen_pos']
         pos2 = sample_dict['target_screen_pos']
 
         positions = tf.concat((pos1, pos2), axis=0, name='concat_positions')
         action = sample_dict['action']
 
-        return (positions,img1, img2, action)
+        return (positions, action)
 
     @staticmethod
     def eval_sample_from_dict(sample_dict):
         #
         # this method must use numpy primitives
         #
-        img1 = sample_dict['centercam']
-        # img1 = img1.resize([224, 224], PIL.Image.BILINEAR)
-        # img1 = np.asarray(img1)
-        # img1 = img1[:,:,0:3]
-        # img1 = img1 - vgg16_siamese.mean()
-        # img1 = np.expand_dims(img1, axis=0)
-        img2 = sample_dict['multichanneldepthcam']
-        # img2 = img2.resize([224, 224], PIL.Image.BILINEAR)
-        # img2 = np.asarray(img2, dtype=np.float32) / (256.0 * 256.0)
-        # img2 = np.stack((img2, img2, img2), axis=2)
-        # img2 = np.expand_dims(img2, axis=0)
+
         pos1 = sample_dict['finger_screen_pos']
         pos2 = sample_dict['target_screen_pos']
         positions = np.concatenate((pos1, pos2), axis=0)
         positions = np.expand_dims(positions, axis=0)
 
-        return (positions, img1, img2)
+        return (positions,)
 
     def loss_feed_dict(self, batch):
         return {
-            # self.img1: batch[0],
-            # self.img2: batch[1],
             self.positions: batch[0],
-            self.action: batch[3]}
+            self.action: batch[1]}
 
     def eval_feed_dict(self, obs_dict):
         sample = self.eval_sample_from_dict(obs_dict)
         return {
-            # self.img1: sample[0],
-            # self.img2: sample[1],
             self.positions: sample[0]
         }
 
@@ -109,7 +79,6 @@ class DaggerPolicy:
         return tf.losses.mean_squared_error(self.action, self.predicted_action)
 
     def policy_initializer(self):
-        # self.base_network.load('vgg16.npy', tf.get_default_session(), ignore_missing=True)
         pass
 
     def invalid_sample(self, sample_dict):
@@ -254,69 +223,3 @@ class DaggerPolicy:
         else:
             dataset = tf.contrib.data.TFRecordDataset(samples)
             return dataset.map(tfrecord_map)
-
-class vgg16_siamese(Network):
-    def __init__(self, inputs, trainable=True):
-        self.inputs = []
-        self.layers = dict(inputs)
-        self.trainable = trainable
-        self.setup()
-
-    def setup(self):
-        # first tower
-        (self.feed('img1')
-         .conv(3, 3, 64, 1, 1, name='conv1_1', c_i=3)
-         .conv(3, 3, 64, 1, 1, name='conv1_2', c_i=64)
-         .max_pool(2, 2, 2, 2, name='pool1')
-         .conv(3, 3, 128, 1, 1, name='conv2_1', c_i=64)
-         .conv(3, 3, 128, 1, 1, name='conv2_2', c_i=128)
-         .max_pool(2, 2, 2, 2, name='pool2')
-         .conv(3, 3, 256, 1, 1, name='conv3_1', c_i=128)
-         .conv(3, 3, 256, 1, 1, name='conv3_2', c_i=256)
-         .conv(3, 3, 256, 1, 1, name='conv3_3', c_i=256)
-         .max_pool(2, 2, 2, 2, name='pool3')
-         .conv(3, 3, 512, 1, 1, name='conv4_1', c_i=256)
-         .conv(3, 3, 512, 1, 1, name='conv4_2', c_i=512)
-         .conv(3, 3, 512, 1, 1, name='conv4_3', c_i=512)
-         .max_pool(2, 2, 2, 2, name='pool4')
-         .conv(3, 3, 512, 1, 1, name='conv5_1', c_i=512)
-         .conv(3, 3, 512, 1, 1, name='conv5_2', c_i=512)
-         .conv(3, 3, 512, 1, 1, name='conv5_3', c_i=512)
-         .max_pool(2, 2, 2, 2, name='pool5')
-         .fc(4096, name='fc6')
-         .fc(4096, name='fc7'))
-
-        # second tower
-        (self.feed('img2')
-         .conv(3, 3, 64, 1, 1, name='conv1_1_p', c_i=3)
-         .conv(3, 3, 64, 1, 1, name='conv1_2_p', c_i=64)
-         .max_pool(2, 2, 2, 2, name='pool1_p')
-         .conv(3, 3, 128, 1, 1, name='conv2_1_p', c_i=64)
-         .conv(3, 3, 128, 1, 1, name='conv2_2_p', c_i=128)
-         .max_pool(2, 2, 2, 2, name='pool2_p')
-         .conv(3, 3, 256, 1, 1, name='conv3_1_p', c_i=128)
-         .conv(3, 3, 256, 1, 1, name='conv3_2_p', c_i=256)
-         .conv(3, 3, 256, 1, 1, name='conv3_3_p', c_i=256)
-         .max_pool(2, 2, 2, 2, name='pool3_p')
-         .conv(3, 3, 512, 1, 1, name='conv4_1_p', c_i=256)
-         .conv(3, 3, 512, 1, 1, name='conv4_2_p', c_i=512)
-         .conv(3, 3, 512, 1, 1, name='conv4_3_p', c_i=512)
-         .max_pool(2, 2, 2, 2, name='pool4_p')
-         .conv(3, 3, 512, 1, 1, name='conv5_1_p', c_i=512)
-         .conv(3, 3, 512, 1, 1, name='conv5_2_p', c_i=512)
-         .conv(3, 3, 512, 1, 1, name='conv5_3_p', c_i=512)
-         .max_pool(2, 2, 2, 2, name='pool5_p')
-         .fc(4096, name='fc6_p')
-         .fc(4096, name='fc7_p'))
-
-          # combine towers and positions
-        (self.feed('fc7', 'fc7_p', 'positions')
-         .concat(1, name='combined_fc7')
-         .fc(256, name="dagger_fc8")
-         .fc(256, name="dagger_fc9"))
-
-    @staticmethod
-    def mean():
-        # Pixel mean values (BGR order) as a (1, 1, 3) array
-        # These are the values originally used for training VGG16
-        return np.array([[103.939, 116.779, 123.68]])
