@@ -5,6 +5,8 @@ from lib.networks.network import Network
 from dagger_policy_base import DaggerPolicyBase
 
 class DaggerPolicy:
+    width = 224
+    height = 224
     def __init__(self, dir_name):
         super().__init__(dir_name)
         self.img1 = tf.placeholder(tf.float32, shape=[None, 224, 224, 3], name='img1')
@@ -16,8 +18,7 @@ class DaggerPolicy:
         self.predicted_positions = tf.contrib.layers.fully_connected(inputs=self.base_network.get_output("final"), num_outputs=4,
                                                                      activation_fn=None, scope='predict_positions')
 
-    @staticmethod
-    def train_sample_from_dict(sample_dict):
+    def train_sample_from_dict(self, sample_dict):
         #
         # This method must use tensorflow primitives
         #
@@ -25,25 +26,20 @@ class DaggerPolicy:
         img1 = tf.slice(img1, [0,0,0], [-1,-1,3])
         img1 = tf.cast(img1, tf.float32)
         img1 = img1 - vgg16_siamese.mean()
-        # img1 = tf.image.resize_images(img1, [224, 224])
-        # img2 = sample_dict['multichanneldepthcam']
-        # img2 = tf.cast(img2, tf.float32) / (256.0 * 256.0)
-        # img2 = tf.stack((img2, img2, img2), axis=2, name='stack_depth_channels')
-        # img2 = tf.image.resize_images(img2, [224, 224])
+        img1 = self.tf_resize(img1, DaggerPolicy.width, DaggerPolicy.height)
         pos1 = tf.slice(sample_dict['finger_screen_pos'],[0], [2])
         pos2 = tf.slice(sample_dict['target_screen_pos'], [0], [2])
 
         positions = tf.concat((pos1, pos2), axis=0, name='concat_positions')
 
-        return (img1, img2, positions)
+        return (img1, positions)
 
-    @staticmethod
-    def eval_sample_from_dict(sample_dict):
+    def eval_sample_from_dict(self, sample_dict):
         #
         # this method must use numpy primitives
         #
         img1 = sample_dict['centercam']
-        #img1 = img1.resize([224, 224], PIL.Image.BILINEAR)
+        img1 = self.im_resize(img1, DaggerPolicy.width, DaggerPolicy.height)
         img1 = np.asarray(img1)
         img1 = img1[:,:,0:3]
         img1 = img1 - vgg16_siamese.mean()
@@ -59,7 +55,7 @@ class DaggerPolicy:
     def loss_feed_dict(self, batch):
         return {
             self.img1: batch[0],
-            self.positions: batch[2]}
+            self.positions: batch[1]}
 
     def eval_feed_dict(self, obs_dict):
         sample = self.eval_sample_from_dict(obs_dict)

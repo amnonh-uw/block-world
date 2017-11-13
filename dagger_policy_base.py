@@ -1,6 +1,7 @@
 import os
 import tensorflow as tf
 import numpy as np
+from PIL import Image
 
 class DaggerPolicyBase:
     def __init__(self, dir_name):
@@ -10,6 +11,21 @@ class DaggerPolicyBase:
             self.sample_counter = 0
         else:
             self.path = None
+
+    def tf_resize(self, img, width, height):
+        shape = tf.shape(img)
+        if shape[0] != width or shape[1] != height:
+            print("resizing image to {},{}".format(width, height))
+            img = tf.image.resize_images(img, [width, height])
+
+        return img
+
+    def im_resize(self, img, width, height):
+        if width != img.width or height != img.height:
+            print("resizing image to {},{}".format(width, height))
+            img = img.resize([width, height], Image.BILINEAR)
+
+        return img
 
     def invalid_sample(self, sample_dict):
         def invalid_pos(x, y, z, width, height):

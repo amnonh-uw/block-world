@@ -18,8 +18,7 @@ class DaggerPolicy(DaggerPolicyBase):
         self.predicted_positions = tf.contrib.layers.fully_connected(inputs=self.base_network.get_output("final"), num_outputs=4,
                                                                      activation_fn=None, scope='predict_positions')
 
-    @staticmethod
-    def train_sample_from_dict(sample_dict):
+    def train_sample_from_dict(self, sample_dict):
         #
         # This method must use tensorflow primitives
         #
@@ -27,7 +26,8 @@ class DaggerPolicy(DaggerPolicyBase):
         img1 = tf.slice(img1, [0,0,0], [-1,-1,3])
         img1 = tf.cast(img1, tf.float32)
         img1 = img1 - vgg16.mean()
-        img1 = tf.image.resize_images(img1, [DaggerPolicy.width, DaggerPolicy.height])
+
+        img1 = self.tf_resize(img1, DaggerPolicy.width, DaggerPolicy.height)
 
         pos1 = tf.slice(sample_dict['finger_screen_pos'], [0], [2])
         pos2 = tf.slice(sample_dict['target_screen_pos'], [0], [2])
@@ -36,13 +36,12 @@ class DaggerPolicy(DaggerPolicyBase):
 
         return (img1, positions)
 
-    @staticmethod
-    def eval_sample_from_dict(sample_dict):
+    def eval_sample_from_dict(self, sample_dict):
         #
         # this method must use numpy primitives
         #
         img1 = sample_dict['centercam']
-        img1 = img1.resize([DaggerPolicy.width, DaggerPolicy.height], PIL.Image.BILINEAR)
+        img1 = self.im_reize(img1, DaggerPolicy.width, DaggerPolicy.height)
         img1 = np.asarray(img1)
         img1 = img1[:,:,0:3]
         img1 = img1 - vgg16.mean()
