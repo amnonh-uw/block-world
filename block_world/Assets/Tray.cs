@@ -40,18 +40,12 @@ public class Tray : MonoBehaviour
     float DropHeight;
     public Material ObjBaseMat;
    
-    bool TrackDropping;
+    bool objectsDropping;
     public bool Ready;
 	bool Resetting;
 
-    HttpListener listener;
-    Thread listenerThread;
-    bool exitListener;
+    Listener listener;
     bool takeCameraShot;
-    HttpListenerResponse ListenerResponse;
-	string listenerAction;
-	string listenerArgs;
-    Object listenerLock;
 
     KeyCode Forward = KeyCode.W;
     KeyCode Left = KeyCode.A;
@@ -76,93 +70,31 @@ public class Tray : MonoBehaviour
 		target = null;
 		CommandCounter = 0;
 
-        listener = new HttpListener();
-		string port = System.Environment.GetEnvironmentVariable("PORT");
-		if (port == null)
-			port = "9000";
-
-		string prefix = "http://*:" + port + "/";
-        listener.Prefixes.Add(prefix);
-		Debug.Log ("Listening to " + prefix);
-		try
-		{
-        	listener.Start();
-		}
-		catch (SocketException  ex)
-		{
+        listener = new Listener();
+        if(!listener.Start()) {
 			Debug.Log ("can't listen to port");
 			Application.Quit ();
 		}
 
-
-        listenerThread = new Thread(listenerMain);
-        exitListener = false;
-        listenerLock = new Object();
-        listenerThread.Start();
-
-		TrackDropping = false;
+		objectsDropping = false;
 		Ready = true;
 
 		Application.runInBackground = true;
     }
 
-    private void listenerMain()
-    {
-        while(!exitListener)
-        {
-            HttpListenerContext context = listener.GetContext();
-            HttpListenerRequest request = context.Request;
-            ListenerResponse = context.Response;
-
-            if (request.HasEntityBody)
-            {
-                Stream body = request.InputStream;
-                Encoding encoding = request.ContentEncoding;
-                StreamReader reader = new StreamReader(body, encoding);
-
-
-                if (request.ContentType.ToLower() == "application/x-www-form-urlencoded")
-                {
-                    string s = reader.ReadToEnd();
-                    string[] pairs = s.Split('&');
-
-                    lock (listenerLock)
-                    {
-						listenerAction = null;
-						listenerArgs = null;
-                        for (int i = 0; i < pairs.Length; i++)
-                        {
-							string[] items = WWW.UnEscapeURL(pairs[i]).Split(new char[] {'='}, 2);
-                            string name = items[0];
-							string value = items[1];
-
-							if (name == "command") 
-								listenerAction = value;
-
-							if (name == "args") {
-								// Debug.LogFormat ("Listener args <{0}>", value);
-								listenerArgs = value;
-							}
-                        }
-                    }
-                }
-
-                body.Close();
-                reader.Close();
-            }
-        }
-
-        listener.Stop();
-    }
+	void OnApplicationQuit()
+	{
+		listener.Stop ();
+	}
 
 	private void NoResponse()
 	{
 		takeCameraShot = false;
-		ListenerResponse.ContentType = "";
-		ListenerResponse.StatusCode = 200;
-		ListenerResponse.StatusDescription = "OK";
-		ListenerResponse.ContentLength64 = 0;
-		ListenerResponse.OutputStream.Close ();
+		listener.Response.ContentType = "";
+		listener.Response.StatusCode = 200;
+		listener.Response.StatusDescription = "OK";
+		listener.Response.ContentLength64 = 0;
+		listener.Response.OutputStream.Close ();
 	}
 
     public void BoolResponse(bool b) {
@@ -194,7 +126,7 @@ public class Tray : MonoBehaviour
 
 		Resetting = true;
 		Ready = false;
-		TrackDropping = false;
+		objectsDropping = false;
 		CollisionHappened = false;
     }
 		
@@ -211,10 +143,9 @@ public class Tray : MonoBehaviour
 
 	private void Initialize()
 	{
-		TrackDropping = false;
+		objectsDropping = false;
 		Ready = false;
 		takeCameraShot = false;
-		listenerAction = null;
 		Resetting = false;
 		NumObjects = p.MaxObjects;
 
@@ -360,7 +291,7 @@ public class Tray : MonoBehaviour
 		if (NumObjects-- <= 0 || Resetting)
         {
 			// Debug.Log ("Done Dropping");
-			TrackDropping = true;
+			objectsDropping = true;
             return;
         }
 
@@ -514,7 +445,7 @@ public class Tray : MonoBehaviour
         //float v = Input.GetAxis("Mouse Y");
         //cam.transform.position += new Vector3(Speed * h, 0f, Speed * v);
 
-        if (TrackDropping && !Resetting)
+        if (objectsDropping && !Resetting)
         {
 			foreach (GameObject obj in ObjList) {
 				Vector3 vec = obj.GetComponent<Rigidbody> ().velocity;
@@ -525,159 +456,132 @@ public class Tray : MonoBehaviour
 				
             if (!Ready)
             {
-				// Debug.LogFormat ("Ready {0} objects remaining", ObjList.Count);
                 target = CreateRandomTarget();
-				TrackDropping = false;
+				objectsDropping = false;
 				Ready = true;
+                takeCameraShot = true;
+                return;
             }
         }
 
 		if (Ready && !Resetting)
         {
-            lock (listenerLock)
+            string action, args, body;
+
+			listener.GetAction(out action, out args, out body);
+
+			if (body != null)
+				Debug.LogFormat ("Request {0}", body);
+			
+			if (action == null)
+				return;
+
+			Debug.LogFormat ("Command {0} args {1}", action, args);
+
+        
+            if (action != null) {
+                CommandCounter += 1;
+                if (CommandCounter % 100 == 0)
+                    Debug.LogFormat ("Total Memory use {0}", System.GC.GetTotalMemory (true));
+            }
+
+            if (action == "clear_tray")
             {
-				bool lookForAction = false;
-                if (listenerAction != null)
-                {
-					// Debug.LogFormat ("Listener action {0}", listenerAction);
-					//
-					// actions:
-					//	move_finger (inc_pose)
-					//	move_cams	(inc_pos)
-					//	quit
-					//	named parameters
-					//	reset
-					//	get_json_params
-					// 	get_json_objectinfo
-					//
-					// random scenario:
-					//	reset, then sequence of move_finger and move_cams
-					//
-					// preset scenrio
-					//	clear_tray
-					//	set_finger
-					//	set_target
-					//	move_cams
-					//	add_object
-					//  then sequence of move_finger and move_cams
-					//	
+                ClearTray ();
+				takeCameraShot = true;
+                return;
+            }
 
+            if (action == "set_finger")
+            {
+                ObjectInfo info = new ObjectInfo (args, finger);
+                SetFinger (info);
+                takeCameraShot = true;
+                return;
+            }
 
-					CommandCounter += 1;
-					if (CommandCounter % 100 == 0)
-						Debug.LogFormat ("Total Memory use {0}", System.GC.GetTotalMemory (true));
+            if (action == "set_target")
+            {
+                ObjectInfo info = new ObjectInfo (args, target);
+                SetTarget (info);
+                takeCameraShot = true;
+                return;
+            }
 
-					// Debug.LogFormat ("listenerAction {0}", listenerAction);
-					// if (listenerArgs != null)
-					// 	Debug.LogFormat ("listenerArgs {0}", listenerArgs);
-					// else
-					//	Debug.Log ("no args");
+            if (action == "add_object")
+            {
+                ObjectInfo info = new ObjectInfo (args);
+                AddObject (info);
+                takeCameraShot = true;
+                return;
+            }
 
-					if (listenerAction == "clear_tray")
-					{
-						ClearTray ();
-						takeCameraShot = true;
-						listenerAction = null;
-					}
+            if (action == "move_finger")
+            {
+                Pose p = new Pose (args);
 
-					if (listenerAction == "set_finger")
-					{
-						ObjectInfo info = new ObjectInfo (listenerArgs, finger);
-						SetFinger (info);
-						takeCameraShot = true;
-						listenerAction = null;
-					}
-
-					if (listenerAction == "set_target")
-					{
-						ObjectInfo info = new ObjectInfo (listenerArgs, target);
-						SetTarget (info);
-						takeCameraShot = true;
-						listenerAction = null;
-					}
-
-					if (listenerAction == "add_object")
-					{
-						ObjectInfo info = new ObjectInfo (listenerArgs);
-						AddObject (info);
-						takeCameraShot = true;
-						listenerAction = null;
-					}
-
-					if (listenerAction == "move_finger")
-					{
-						Pose p = new Pose (listenerArgs);
-
-						if (CollisionCheck(finger, p)) {
-							finger.transform.position += p.position;
-							finger.transform.Rotate (p.rotation);
-						}
-						takeCameraShot = true;
-						listenerAction = null;
-					}
-
-                    if (listenerAction == "check_occupied") {
-                        Pose p = new Pose (listenerArgs);
-                       
-                        BoolResponse (OccupancyCheck (p, finger.transform.localScale));
-                        listenerAction = null;
-                    }
-
-					if (listenerAction == "move_cams")
-					{
-						Pose p = new Pose (listenerArgs);
-
-						if (CollisionCheck(Camera.main.gameObject, p)) {
-							Camera.main.transform.position += p.position;
-							Camera.main.transform.Rotate (p.rotation);
-						}
-
-						takeCameraShot = true;
-						listenerAction = null;
-					}
-
-					if (listenerAction == "quit") {
-						NoResponse ();
-						Application.Quit ();
-						listenerAction = null;
-					}
-
-					if (p.Set(listenerAction, listenerArgs)) {
-						ParametersChanged ();
-						NoResponse ();
-						listenerAction = null;
-					}
-						
-					if (listenerAction == "wait_for_ready") {
-						takeCameraShot = true;
-						listenerAction = null;
-					}
-
-                    if (listenerAction == "reset")
-                    {
-                        Reset();
-                        Initialize();
-						lookForAction = true;
-                        listenerAction = "wait_for_ready";
-                    }
-
-					if (listenerAction == "get_json_params") {
-						JsonResponse (p.ToJson ());
-						listenerAction = null;
-					}
-
-					if (listenerAction == "get_json_objectinfo") {
-						ObjectsInfo oi = new ObjectsInfo (this);
-						JsonResponse (oi.ToJson ());
-						listenerAction = null;
-					}
-
-					if (listenerAction != null && listenerAction != "" && !lookForAction) {
-						Debug.LogFormat ("Unknown commmand {0}", listenerAction);
-						NoResponse ();
-						listenerArgs = null;
-					}
+                if (CollisionCheck(finger, p)) {
+                    finger.transform.position += p.position;
+                    finger.transform.Rotate (p.rotation);
                 }
+                takeCameraShot = true;
+                return;
+            }
+
+            if (action == "check_occupied") {
+                Pose p = new Pose (args);
+               
+                BoolResponse (OccupancyCheck (p, finger.transform.localScale));
+                return;
+            }
+
+            if (action == "move_cams")
+            {
+                Pose p = new Pose (args);
+
+                if (CollisionCheck(Camera.main.gameObject, p)) {
+                    Camera.main.transform.position += p.position;
+                    Camera.main.transform.Rotate (p.rotation);
+                }
+
+                takeCameraShot = true;
+                return;
+            }
+
+            if (action == "quit") {
+                NoResponse ();
+                Application.Quit ();
+                return;
+            }
+
+            if (p.Set(action, args)) {
+                ParametersChanged ();
+                NoResponse ();
+                return;
+            }
+						
+            if (action == "reset")
+            {
+                Reset();
+                Initialize();
+                return;
+            }
+
+            if (action == "get_json_params") {
+                JsonResponse (p.ToJson ());
+                return;
+            }
+
+            if (action == "get_json_objectinfo") {
+                ObjectsInfo oi = new ObjectsInfo (this);
+                JsonResponse (oi.ToJson ());
+                return;
+            }
+
+            if (action != null && action != "") {
+                Debug.LogFormat ("Unknown commmand {0}", action);
+                NoResponse ();
+                return;
             }
         }
     }
@@ -746,13 +650,13 @@ public class Tray : MonoBehaviour
 
 	void JsonResponse(string json)
 	{
-		ListenerResponse.ContentType = "application/json";
-		ListenerResponse.StatusCode = 200;
-		ListenerResponse.StatusDescription = "OK";
+		listener.Response.ContentType = "application/json";
+		listener.Response.StatusCode = 200;
+		listener.Response.StatusDescription = "OK";
 		byte[] buffer = Encoding.UTF8.GetBytes(json);
-		ListenerResponse.ContentLength64 = buffer.Length;
-		ListenerResponse.OutputStream.Write(buffer, 0, buffer.Length);
-		ListenerResponse.OutputStream.Close();
+		listener.Response.ContentLength64 = buffer.Length;
+		listener.Response.OutputStream.Write(buffer, 0, buffer.Length);
+		listener.Response.OutputStream.Close();
 	}
    
     void LateUpdate()

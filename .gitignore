@@ -14,7 +14,10 @@ __pycache__
 Dockerfile
 baselines/*
 block_world/Library
-Assets
+Assets/*.meta
+block_world/Assets/BlockWorld.unity
+block_world/Assets/ImageSynthesis/
+block_world/Assets/Resources/
 block_world/ProjectSettings
 block_world/Temp
 block_world/obj
