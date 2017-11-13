@@ -5,8 +5,10 @@ from dagger_policy_base import DaggerPolicyBase
 
 
 class DaggerPolicy(DaggerPolicyBase):
-    width = 1024
-    height = 768
+    # width = 1024
+    # height = 768
+    width = 224
+    height = 224
     def __init__(self, dir_name):
         super().__init__(dir_name)
 
@@ -41,7 +43,7 @@ class DaggerPolicy(DaggerPolicyBase):
         # this method must use numpy primitives
         #
         img1 = sample_dict['centercam']
-        img1 = self.im_reize(img1, DaggerPolicy.width, DaggerPolicy.height)
+        img1 = self.im_resize(img1, DaggerPolicy.width, DaggerPolicy.height)
         img1 = np.asarray(img1)
         img1 = img1[:,:,0:3]
         img1 = img1 - vgg16.mean()
@@ -66,6 +68,19 @@ class DaggerPolicy(DaggerPolicyBase):
 
     def get_loss(self):
         return tf.losses.mean_squared_error(self.positions, self.predicted_positions)
+
+    @staticmethod
+    def print_results(obs, action):
+        pos1 = obs['finger_screen_pos']
+        pos1 = pos1[0:2]
+        act1 = action[0:2]
+        pos2 = obs['target_screen_pos']
+        pos2 = pos2[0:2]
+        act2 = action[2:4]
+
+        print("finger screen pos: {} act {} delta {}".format(pos1, act1, pos1-act1))
+        print("target screen pos: {} act {} delta {}".format(pos2, act2, pos2-act2))
+
 
     def print_batch(self, batch):
         pass
