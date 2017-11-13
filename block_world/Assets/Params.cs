@@ -24,8 +24,8 @@ namespace Utilities
 	    public float TargetSize = 0.05f;
 	    public float StereoDistance = 0.1f;
 
-	    public int cameraWidth = 800;
-	    public int cameraHeight = 600;
+	    public int cameraWidth = 1024;
+	    public int cameraHeight = 768;
 	
 	    bool Nonzero(float f) {
 	        return f < -velEpsilon || f > velEpsilon;

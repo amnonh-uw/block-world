@@ -732,7 +732,7 @@ public class Tray : MonoBehaviour
 		RenderTexture currentRT = RenderTexture.active;
 		RenderTexture.active = cam.targetTexture;
 		cam.Render();
-			
+
 		Texture2D image = new Texture2D(cam.targetTexture.width, cam.targetTexture.height);
 		image.ReadPixels(new Rect(0, 0, cam.targetTexture.width, cam.targetTexture.height), 0, 0);
 		image.Apply();
@@ -763,25 +763,18 @@ public class Tray : MonoBehaviour
 
             Response r = new Response();
 			r.leftcam = ScreenShot (leftcam);
-			// File.WriteAllBytes("/tmp/leftcam.png", r.leftcam);
 			r.rightcam = ScreenShot (rightcam);
-			// File.WriteAllBytes("/tmp/rightcam.png", r.rightcam);
 			r.centercam = ScreenShot (centercam);
-			// File.WriteAllBytes("/tmp/centercam.png", r.centercam);
 			ImageSynthesis center_is = centercam.gameObject.GetComponent<ImageSynthesis> ();
 			r.depthcam = center_is.Encode ("_depth");
 			if (r.depthcam.Length == 0)
 				Debug.Log ("Error: failed to encode _depth");
-			// File.WriteAllBytes("/tmp/depthcam.png", r.depthcam);
 			r.multichanneldepthcam = center_is.Encode ("_depthmulti");
 			if (r.multichanneldepthcam.Length == 0)
 				Debug.Log ("Error: failed to encode _depthmulti");
-			// File.WriteAllBytes("/tmp/mutlichanneldepthcam.png", r.multichanneldepthcam);
 			r.normalcam = center_is.Encode ("_normals");
-			// File.WriteAllBytes("/tmp/mutlichanneldepthcam.png", r.multichanneldepthcam);
 			if (r.normalcam.Length == 0)
 				Debug.Log ("Error: failed to encode _normals");
-			// File.WriteAllBytes("/tmp/normalcam.png", r.normalcam);
 			
 			r.finger_pos = finger.transform.position;
 			r.finger_rot = finger.transform.rotation.eulerAngles;
