@@ -1,28 +1,24 @@
 import sys
-from args import get_args
-import tensorflow as tf
+from args import get_args, env_args
 from block_world import BlockWorldEnv as make
 from dagger import Dagger
-from dagger_policy import DaggerPolicy
+from importlib import import_module
 
 def main(argv):
     args = get_args(argv)
 
-    args.width = DaggerPolicy.width
-    args.height = DaggerPolicy.height
-    args.tray_length=3.0
-    args.tray_width=2.0
-    args.stereo_distance=0.5
-    args.step_size = 0.1
-    args.verbose = True
+    x = env_args()
+    print(x)
+    env = make(**vars(env_args()))
 
-    env = make(**vars(args))
+    policy_mod = import_module(args.policy_source)
+    policy = getattr(policy_mod, 'DaggerPolicy')
 
     dagger = Dagger(env,
-                    DaggerPolicy,
+                    policy,
                     **args)
 
-    dagger.learn(save_file_name="dagger_block_world")
+    dagger.learn()
 
     env.close()
 

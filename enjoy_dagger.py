@@ -1,9 +1,8 @@
 import sys
 from args import get_args, env_args
-import tensorflow as tf
 from block_world import BlockWorldEnv as make
 from dagger import Dagger
-from dagger_policy import DaggerPolicy
+from importlib import import_module
 
 def main(argv):
     args = get_args(argv)
@@ -12,11 +11,14 @@ def main(argv):
     print(x)
     env = make(**vars(env_args()))
 
+    policy_mod = import_module(args.policy_source)
+    policy = getattr(policy_mod, 'DaggerPolicy')
+
     dagger = Dagger(env,
-                    DaggerPolicy,
+                    policy,
                     **vars(args))
 
-    dagger.test("dagger_block_world")
+    dagger.test(args.save_file_name)
 
     env.close()
 
