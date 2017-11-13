@@ -16,11 +16,16 @@ def get_args(argv):
     parser.add_argument('--dir-name', type=str, default='tmp_storage')
     parser.add_argument('--max-samples', type=str, default=None)
     parser.add_argument('--policy-source', type=str, default='dagger_policy')
-    parser.add_argument('--save-file-name', type=str, default="dagger_block_world")
+    parser.add_argument('--save-file-name', type=str, default=None)
     parser.set_defaults(show_obs=False)
     parser.set_defaults(run=True)
 
-    return parser.parse_args(argv)
+    args =  parser.parse_args(argv)
+
+    if args.save_file_name is None:
+        args.save_file_name = args.policy_source + "_save"
+
+    return args
 
 def env_args():
     args = argparse.Namespace()
