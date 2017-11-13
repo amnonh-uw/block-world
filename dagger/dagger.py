@@ -53,10 +53,9 @@ class Dagger:
                 self.load_policy(load_file_name)
 
             self.train_step(dataset)
-            self.save_policy(save_file_name)
+            self.save_policy(self.save_file_name)
 
-    def learn(self, save_file_name, load_file_name = None):
-        self.save_file_name = save_file_name
+    def learn(self, load_file_name = None):
         self.build_graph(self.policy_class)
         self.expert_step()
 
@@ -76,8 +75,8 @@ class Dagger:
             for i in range(self.iterations):
                 print("DAgger iteration {}".format(i))
                 self.train_step()
-                self.save_policy(save_file_name)
-                self.load_policy(save_file_name)
+                self.save_policy(self.save_file_name)
+                self.load_policy(self.save_file_name)
                 self.test_step(iter=i+1)
 
         dagger_results = {'means': self.save_mean, 'stds': self.save_std, 'train_size': self.save_train_size,
@@ -126,6 +125,10 @@ class Dagger:
             self.action_hat  = self.policy.get_output()
 
     def save_policy(self, fname):
+        if fname == None:
+            print("no policy save file given")
+            return
+
         print("saving {}".format(fname))
         fname += "/"
         os.makedirs(os.path.dirname(fname), exist_ok=True)
