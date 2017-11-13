@@ -202,14 +202,14 @@ class env:
         return(data[key])
 
     def save_cams(self, path):
-        # path = path.replace(".tfrecord", '')
-        # self.leftcam.save(path + 'left.png')
-        # self.rightcam.save(path + 'right.png')
-        # self.centercam.save(path + 'center.png')
-        # self.depthcam.save(path + 'depth.png')
-        # self.raw_multdepthcam.save(path + 'rawdepth.png')
-        # self.multichanneldepthcam.save(path + 'multdepth.tiff')
-        # self.normalcam.save(path + 'normals.png')
+        path = path.replace(".tfrecord", '')
+        self.leftcam.save(path + 'left.png')
+        self.rightcam.save(path + 'right.png')
+        self.centercam.save(path + 'center.png')
+        self.depthcam.save(path + 'depth.png')
+        self.raw_multdepthcam.save(path + 'rawdepth.png')
+        self.multichanneldepthcam.save(path + 'multdepth.tiff')
+        self.normalcam.save(path + 'normals.png')
         pass
 
     def save_positions(self, path):
@@ -383,60 +383,11 @@ class _display:
         self.show_obs = show_obs
         self.first = True
 
-        # cv2.startWindowThread()
-        # cv2.namedWindow("center cam", cv2.WINDOW_AUTOSIZE)
-        # cv2.namedWindow("left cam", cv2.WINDOW_AUTOSIZE)
-        # cv2.namedWindow("right cam", cv2.WINDOW_AUTOSIZE)
-        # cv2.namedWindow("depth cam", cv2.WINDOW_AUTOSIZE)
-
     def show(self, env):
-        env.save_cams("cam")
+        env.save_cams("/tmp/")
         if self.show_obs:
             if env.collision:
                 print("BOOM")
-
-            # centercam = cv2.cvtColor(np.array(env.centercam), cv2.COLOR_RGB2BGR)
-            # leftcam = cv2.cvtColor(np.array(env.leftcam), cv2.COLOR_RGB2BGR)
-            # rightcam = cv2.cvtColor(np.array(env.rightcam), cv2.COLOR_RGB2BGR)
-            # depthcam = cv2.cvtColor(np.array(env.depthcam), cv2.COLOR_RGB2BGR);
-            # multichanneldepthcam = cv2.cvtColor(np.array(env.multichanneldepthcam), cv2.COLOR_RGB2BGR);
-            # normalcam = cv2.cvtColor(np.array(env.normalcam), cv2.COLOR_RGB2BGR);
-
-            # c = np.asarray(env.depthcam, dtype=np.float)
-            # print("depth red channel")
-            # print(c[:,:,0])
-
-            # cv2.imshow("center cam", centercam)
-            # cv2.imshow("left cam", leftcam)
-            # cv2.imshow("right cam", rightcam)
-            # cv2.imshow("depth cam", depthcam)
-            # cv2.imshow("multi channel depth cam", multichanneldepthcam)
-            # cv2.imshow("normal cam", normalcam)
-
-            # if env.highprecision:
-            #     f = self.rgba_img_to_float(env.depthcam)
-            #     m = np.amax(f)
-            #     print("max value is {}", m)
-            #     f[f > m - 0.01] = 0
-            #     m = np.amax(f)
-            #     g = f * 255 / m
-            #     g = g.astype(np.int8)
-            #     cv2.imshow("depth cam", g)
-            #     self.show_pointcloud(env.centercam, f)
-            # else:
-            #     pass
-            #     leftcam_grayscale = np.array(env.leftcam.convert("L"))
-            #     rightcam_grayscale = np.array(env.rightcam.convert("L"))
-            #     cv2.imshow("left grayscale", leftcam_grayscale)
-            #     cv2.imshow("right grayscale", rightcam_grayscale)
-            #     stereo = cv2.StereoBM_create(numDisparities=16, blockSize=15)
-            #     depthcam = stereo.compute(leftcam_grayscale, rightcam_grayscale)
-            #     cv2.imshow("depth cam", depthcam)
-            #
-            # cv2.waitKey(0)
-
-    def show_image(self, cam):
-        cam.show()
 
 if __name__ == "__main__":
     env_test(sys.argv[1:])
