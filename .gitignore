@@ -24,5 +24,6 @@ out
 block_world/.vs/
 dist_world/dagger_dist_world/
 *.tfrecord
-.swp
-.npy
+*.swp
+*.npy
+dagger_block_world
