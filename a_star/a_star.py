@@ -18,8 +18,8 @@ class aStarBase:
         # the heuristic cannot over estimate the distance
         pass
 
-    def find_path(self, start_point, goal_point, Node):
-        start = Node(start_point)
+    def find_path_from_origin(self, goal_point, Node):
+        start = Node.origin()
         self.goal = goal_point
 
         openset = set()
@@ -42,6 +42,8 @@ class aStarBase:
 
             openset.remove(current)
             closedset.add(current)
+
+            print("current {} closed_set {} open_set {}".format(current, len(closedset), len(openset)))
 
             # Loop through the node's children/siblings
             for node in self.children(current):
