@@ -2,6 +2,7 @@ import tensorflow as tf
 import numpy as np
 from lib.networks.network import Network
 from dagger_policy_base import DaggerPolicyBase
+from PIL import ImageDraw
 
 
 class DaggerPolicy(DaggerPolicyBase):
@@ -70,7 +71,7 @@ class DaggerPolicy(DaggerPolicyBase):
         return tf.losses.mean_squared_error(self.positions, self.predicted_positions)
 
     @staticmethod
-    def print_results(obs, action):
+    def print_results(obs, action, step=None):
         pos1 = obs['finger_screen_pos']
         pos1 = pos1[0:2]
         act1 = action[0:2]
@@ -81,6 +82,13 @@ class DaggerPolicy(DaggerPolicyBase):
         print("finger screen pos: {} act {} delta {}".format(pos1, act1, pos1-act1))
         print("target screen pos: {} act {} delta {}".format(pos2, act2, pos2-act2))
 
+        if step != None:
+            im = obs['centercam']
+            draw = ImageDraw.Draw(im)
+            draw.rectangle([pos1, pos2])
+            del draw
+
+            im.save("enjoy" + str(step) + ".png")
 
     def print_batch(self, batch):
         pass
