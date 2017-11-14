@@ -3,6 +3,13 @@ import numpy as np
 from lib.networks.network import Network
 from dagger_policy_base import DaggerPolicyBase
 
+#
+#
+# Learn to transform from image space coords (pixel x, pixel y, distance from cam)
+# to world coordinates
+#
+#
+
 class DaggerPolicy(DaggerPolicyBase):
     def __init__(self, dir_name):
         super().__init__(dir_name)

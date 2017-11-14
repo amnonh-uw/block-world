@@ -4,6 +4,13 @@ import tensorflow.contrib.slim as slim
 import numpy as np
 from dagger_policy_base import DaggerPolicyBase
 
+#
+#
+# Learn to transform from image to x,y position in image of finger
+# using a simple convolutional network
+#
+#
+
 class DaggerPolicy(DaggerPolicyBase):
     width = 224
     height = 224

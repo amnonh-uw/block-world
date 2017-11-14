@@ -4,6 +4,14 @@ from lib.networks.network import Network
 from dagger_policy_base import DaggerPolicyBase
 from PIL import ImageDraw
 
+#
+#
+# Learn to transform from image to x,y position in image of finger and target
+# using a vgg16 with only 8 features
+# note - we can't initialize from vgg weights...
+#
+#
+
 
 class DaggerPolicy(DaggerPolicyBase):
     # width = 1024

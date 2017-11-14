@@ -4,16 +4,6 @@ from block_world_core import env as make_env
 import tensorflow as tf
 
 class BlockWorldEnv(gym.Env):
-    class ActionSpace(gym.Space):
-        #
-        # Actions are a vector of [-1,1],[-1,1],[-1,1]. Each colummn represents a movement in the x,y or z direction
-        # all zeros mean episode end
-        #
-        def __init__(self):
-            self.n = 32
-            self.dtype = tf.int32
-            self.shape = 1
-
     class EnvSpec:
         def __init__(self, **kwargs):
             self.__dict__.update(**kwargs)
@@ -22,7 +12,6 @@ class BlockWorldEnv(gym.Env):
         self.__dict__.update(kwargs)
 
         self.metadata = {'render.modes': ['human', '']}
-        self.action_space = self.ActionSpace()
         self._spec = self.EnvSpec(timestep_limit=35)
 
         self._seed()
@@ -74,6 +63,7 @@ class BlockWorldEnv(gym.Env):
             else:
                 reward = -1000
         else:
+            # limit step sizes to range
             inc_pos = np.array([step_range(x)  for x in action])
             self.block_env.move_finger(inc_pos)
             if self.block_env.collision:

@@ -5,6 +5,15 @@ from dagger_policy_base import DaggerPolicyBase
 from PIL import ImageDraw
 
 
+#
+#
+# Learn to transform from image to x,y position in image of finger and target
+# using a vgg16 convolutional network
+#
+#
+
+
+
 class DaggerPolicy(DaggerPolicyBase):
     # width = 1024
     # height = 768

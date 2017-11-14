@@ -2,7 +2,6 @@
 
 import sys
 import platform
-import matplotlib.pyplot as plt
 import subprocess
 import requests
 import argparse
@@ -11,6 +10,7 @@ from PIL import Image
 from time import sleep
 import numpy as np
 import json
+from a_star.a_star_bw import find_next_step
 
 class env:
     last_port = 9000
@@ -23,8 +23,6 @@ class env:
         self.rot_unit = rot_unit
         self.log = log
         self.verbose = verbose
-
-        print(self.log)
 
         self.first_connection = True
         if run:
@@ -152,6 +150,7 @@ class env:
 
     def set_params(self, **kwargs):
         for key in kwargs:
+            print("{}={}".format(key, kwargs[key]))
             self.do(key, str(kwargs[key]))
 
     def reset(self, **kwargs):
@@ -175,6 +174,10 @@ class env:
         inc_pose = self.round_pose(inc_pose)
         r = self.do("move_finger", str(inc_pose))
         self.extract_response(r.json())
+
+    def check_occupied(self, inc_pose):
+        r = self.do("check_occupied", self.make_string(inc_pose))
+        return self.extract_bool(r.json(), "b")
 
     def move_cams(self, inc_pose):
         inc_pose = self.round_pose(inc_pose)
@@ -377,6 +380,9 @@ def env_test(argv):
 
         def do_res(self, args):
             x.res(args)
+
+        def do_next_expert_step(self, args):
+            print(find_next_step(x, x.target_pos, step_size=0.1, reach_minimum=0.1))
 
         def do_random(self, args):
             elems = x.clean_split(args, ",")

@@ -365,7 +365,7 @@ public class Tray : MonoBehaviour
 	GameObject CreateRandomTarget()
 	{
 		GameObject targ = CreateTarget ();
-		targ.transform.localScale = new Vector3(0.03f, p.TargetSize, p.TargetSize);
+		targ.transform.localScale = new Vector3(p.TargetSize, p.TargetSize, p.TargetSize);
 
 		Vector3 position;
 		Quaternion rotation;
@@ -470,13 +470,13 @@ public class Tray : MonoBehaviour
 
 			listener.GetAction(out action, out args, out body);
 
-			if (body != null)
-				Debug.LogFormat ("Request {0}", body);
+			// if (body != null)
+			//	Debug.LogFormat ("Request {0}", body);
 			
 			if (action == null)
 				return;
 
-			Debug.LogFormat ("Command {0} args {1}", action, args);
+			// Debug.LogFormat ("Command {0} args {1}", action, args);
 
         
             if (action != null) {
@@ -530,6 +530,7 @@ public class Tray : MonoBehaviour
 
             if (action == "check_occupied") {
                 Pose p = new Pose (args);
+                p.position += finger.transform.position;
                
                 BoolResponse (OccupancyCheck (p, finger.transform.localScale));
                 return;
@@ -602,7 +603,6 @@ public class Tray : MonoBehaviour
 		Vector3 halfExtents = size * 0.5f;
 		Collider[]  c = Physics.OverlapBox(p.position, halfExtents, Quaternion.identity, -1, QueryTriggerInteraction.Ignore);
 
-		Debug.Log ("Occupancy check");
         return c.Length != 0;
     }
 
