@@ -2,7 +2,7 @@ import sys
 import argparse
 
 width = 800
-depth = 800
+height = 800
 
 def get_args(argv):
     parser = argparse.ArgumentParser(description='block_world')
@@ -28,8 +28,8 @@ def get_args(argv):
     if args.save_file_name is None:
         args.save_file_name = args.policy_source + "_save"
 
-    if args.dir_naem is None:
-        args.dir_name = "storage{}x{}".format(width, depth)
+    if args.dir_name is None:
+        args.dir_name = "storage{}x{}".format(width, height)
 
     return args
 
@@ -44,6 +44,6 @@ def env_args():
     args.verbose = True
     args.run = True
     args.width = width
-    args.depth = depth
+    args.height = height
 
     return args
