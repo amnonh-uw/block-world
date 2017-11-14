@@ -37,5 +37,7 @@ def env_args():
     args.reach_minimum = 0.1
     args.verbose = True
     args.run = True
+    args.width = 800
+    args.depth = 800
 
     return args
