@@ -102,7 +102,7 @@ class Dagger:
 
                     action = self.action_hat.eval(feed_dict=feed_dict)
                     action = np.squeeze(action)
-                    self.policy.print_results(obs, action)
+                    self.policy.print_results(obs, action, step=steps)
 
                     action = self.env.expert_action()
                     obs, r, done, _ = self.env.step(action)
