@@ -16,7 +16,7 @@ def main(argv):
 
     dagger = Dagger(env,
                     policy,
-                    **args)
+                    **vars(args))
 
     dagger.learn()
 

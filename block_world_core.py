@@ -300,10 +300,13 @@ def env_test(argv):
     parser.add_argument('--no-show-obs', dest='show_obs', action='store_false')
     parser.add_argument('--run', dest='run', action='store_true')
     parser.add_argument('--no-run', dest='run', action='store_false')
+    parser.add_argument('--verbose', dest='verbose', action='store_true')
+    parser.add_argument('--no-verbose', dest='verbose', action='store_false')
     parser.set_defaults(reset=True)
     parser.set_defaults(no_units=False)
     parser.set_defaults(show_obs=False)
     parser.set_defaults(run=True)
+    parser.set_defaults(verbose=True)
     cmd_args = parser.parse_args(argv)
 
 
@@ -315,7 +318,7 @@ def env_test(argv):
     d = _display(show_obs=cmd_args.show_obs)
 
     if cmd_args.reset:
-        x.reset(tray_length=3.0, tray_width=2.0, stereo_distance=0.5)
+        x.reset(tray_length=3.0, tray_width=2.0, stereo_distance=0.5, width=800, height=800)
         d.show(x)
 
     var_dict = dict()
@@ -414,3 +417,6 @@ class _display:
 
 if __name__ == "__main__":
     env_test(sys.argv[1:])
+
+
+
