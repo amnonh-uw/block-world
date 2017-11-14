@@ -1,6 +1,9 @@
 import sys
 import argparse
 
+width = 800
+depth = 800
+
 def get_args(argv):
     parser = argparse.ArgumentParser(description='block_world')
     parser.add_argument('--show-obs', dest='show_obs', action='store_true')
@@ -13,7 +16,7 @@ def get_args(argv):
     parser.add_argument('--epochs', type=int, default=20)
     parser.add_argument('--iterations', type=int, default = 20)
     parser.add_argument('--report_frequency', type=int, default=10)
-    parser.add_argument('--dir-name', type=str, default='tmp_storage')
+    parser.add_argument('--dir-name', type=str, default=None)
     parser.add_argument('--max-samples', type=str, default=None)
     parser.add_argument('--policy-source', type=str, default='dagger_policy')
     parser.add_argument('--save-file-name', type=str, default=None)
@@ -24,6 +27,9 @@ def get_args(argv):
 
     if args.save_file_name is None:
         args.save_file_name = args.policy_source + "_save"
+
+    if args.dir_naem is None:
+        args.dir_name = "storage{}x{}".format(width, depth)
 
     return args
 
@@ -37,7 +43,7 @@ def env_args():
     args.reach_minimum = 0.1
     args.verbose = True
     args.run = True
-    args.width = 800
-    args.depth = 800
+    args.width = width
+    args.depth = depth
 
     return args
