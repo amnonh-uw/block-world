@@ -34,6 +34,10 @@ class env:
             self.set_params(**params_args)
 
     def run(self):
+        if self.is_running():
+            print("run - its already running, do not run again")
+            return
+
         from inspect import getfile
         import os.path
         module_path = getfile(sys.modules[__name__])
@@ -54,6 +58,17 @@ class env:
             shell_command += " " + args
 
         self.process = subprocess.Popen(shell_command, shell=True)
+
+    def is_running(self):
+        try:
+            r = requests.get(self.uri, timeout=1)
+            return True
+
+        except requests.exceptions.ConnectionError:
+            return False
+
+        except requests.exceptions.Timeout:
+            return False
 
     def do(self, command, args=None):
         not_done = True
@@ -165,6 +180,11 @@ class env:
         inc_pose = self.round_pose(inc_pose)
         r = self.do("move_cams", str(inc_pose))
         self.extract_response(r.json())
+
+    def res(self, res):
+        p = res.split(",", 2)
+        self.do("width", p[0])
+        self.do("height", p[1])
 
     def get_json_params(self, args):
         r = self.do("get_json_params")
@@ -351,6 +371,9 @@ def env_test(argv):
         def do_move_cams(self, args):
             x.move_cams(args)
             d.show(x)
+
+        def do_res(self, args):
+            x.res(args)
 
         def do_random(self, args):
             elems = x.clean_split(args, ",")
