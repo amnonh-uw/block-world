@@ -16,12 +16,12 @@ public class Tray : MonoBehaviour
 	public GameObject finger;
 	public GameObject target;
 
-	public GameObject leftcam_controller;
-	public Camera leftcam;
-	public GameObject rightcam_controller;
-	public Camera rightcam;
-	public GameObject centercam_controller;
-	public Camera centercam;
+	public GameObject leftcam_controller = null;
+	public Camera leftcam = null;
+	public GameObject rightcam_controller = null;
+	public Camera rightcam = null;
+	public GameObject centercam_controller = null;
+	public Camera centercam = null;
 
 	public GameObject tray;
 	public GameObject rim1;
@@ -65,7 +65,6 @@ public class Tray : MonoBehaviour
 		colorGenerator = new ColorGenerator ();
 		p = new Params () ;
 		ParametersChanged ();
-		CreateCameras ();
 		finger = null;
 		target = null;
 		CommandCounter = 0;
@@ -148,6 +147,9 @@ public class Tray : MonoBehaviour
 		takeCameraShot = false;
 		Resetting = false;
 		NumObjects = p.MaxObjects;
+
+        if (centercam == null)
+            CreateCameras ();
 
 		CreateTray ();
 		DropNextObject();
@@ -238,7 +240,6 @@ public class Tray : MonoBehaviour
 
 	void PositionMainCamera()
 	{
-		Debug.LogFormat ("finger dist from tray {0}", p.fingerDistFromTray);
 		Camera.main.transform.position = new Vector3 (0f, 2f, p.fingerDistFromTray - 1.6f);
 		Camera.main.transform.eulerAngles = new Vector3 (45f, 0f, 0f);
 	}
@@ -425,7 +426,6 @@ public class Tray : MonoBehaviour
 		centercam = centercam_controller.GetComponent<Camera> ();
 		centercam.gameObject.AddComponent<ImageSynthesis> ();
 	}
-
 
     // Update is called once per frame
     void Update()
