@@ -117,7 +117,8 @@ class Dagger:
             self.policy = policy_class(self.dir_name)
             self.action_hat = self.policy.get_output()
             self.loss = self.policy.get_loss()
-            self.train_step_op = tf.train.AdamOptimizer(learning_rate=1.0e-5).minimize(self.loss)
+            if self.loss is not None:
+                self.train_step_op = tf.train.AdamOptimizer(learning_rate=1.0e-5).minimize(self.loss)
 
     def build_test_graph(self, policy_class):
         with tf.variable_scope("policy"):
