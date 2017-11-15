@@ -19,6 +19,7 @@ def get_args(argv):
     parser.add_argument('--save-file-name', type=str, default=None)
     parser.add_argument('--width', type=int, default = 224)
     parser.add_argument('--height', type=int, default = 224)
+    parser.add_argument('--max-objects', type=int, default = 5)
     parser.set_defaults(show_obs=False)
     parser.set_defaults(run=True)
 
@@ -32,18 +33,18 @@ def get_args(argv):
 
     return args
 
-def env_args():
-    args = argparse.Namespace()
+def env_args(args):
+    env_args = argparse.Namespace()
     
-    args.tray_length=3.0
-    args.tray_width=2.0
-    args.stereo_distance=0.5
-    args.step_size = 0.1
-    args.reach_minimum = 0.1
-    args.verbose = True
-    args.run = True
-    args.width = width
-    args.height = height
-    args.max_objects = 5
+    env_args.tray_length=3.0
+    env_args.tray_width=2.0
+    env_args.stereo_distance=0.5
+    env_args.step_size = 0.1
+    env_args.reach_minimum = 0.1
+    env_args.verbose = True
+    env_args.run = True
+    env_args.width = args.width
+    env_args.height = args.height
+    env_args.max_objects = args.max_objects
 
-    return args
+    return env_args
