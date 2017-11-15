@@ -2,7 +2,7 @@ import os
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import numpy as np
-from dagger_policy_base import DaggerPolicyBase
+from policies.base import DaggerPolicyBase
 
 #
 #
@@ -11,9 +11,10 @@ from dagger_policy_base import DaggerPolicyBase
 #
 #
 
+width = 800
+height = 800
+
 class DaggerPolicy(DaggerPolicyBase):
-    width = 224
-    height = 224
     def __init__(self, dir_name):
         super().__init__(dir_name)
         self.img1 = tf.placeholder(tf.float32, shape=[None, width, height, 3], name='img1')
@@ -24,7 +25,7 @@ class DaggerPolicy(DaggerPolicyBase):
                             weights_initializer=tf.truncated_normal_initializer(0.0, 0.01),
                             weights_regularizer=slim.l2_regularizer(0.0005)):
 
-            conv1 = slim.conv2d(self.img1, 64, [3, 3], padding='VALID', scope='conv1')
+            conv1 = slim.conv2d(self.img1, 8, [3, 3], padding='VALID', scope='conv1')
             conv2 = slim.conv2d(conv1, 64, [3, 3], padding='VALID', scope='conv2')
             flat1 = slim.flatten(conv1)
             fc1 = slim.fully_connected(flat1, 128, scope='fc1')
@@ -37,7 +38,7 @@ class DaggerPolicy(DaggerPolicyBase):
         img1 = sample_dict['centercam']
         img1 = tf.slice(img1, [0,0,0], [-1,-1,3])
         img1 = tf.cast(img1, tf.float32)
-        img1 = self.tf_resize(img1, DaggerPolicy.width, DaggerPolicy.height)
+        # img1 = self.tf_resize(img1, width, height)
 
         pos1 = tf.slice(sample_dict['finger_screen_pos'], [0], [2])
         # pos2 = tf.slice(sample_dict['target_screen_pos'], [0], [2])
@@ -51,7 +52,7 @@ class DaggerPolicy(DaggerPolicyBase):
         # this method must use numpy primitives
         #
         img1 = sample_dict['centercam']
-        img1 = self.im_resize(img1, DaggerPolicy.width, DaggerPolicy.height)
+        # img1 = self.im_resize(img1, width, height)
         img1 = np.asarray(img1)
         img1 = img1[:,:,0:3]
         img1 = np.expand_dims(img1, axis=0)

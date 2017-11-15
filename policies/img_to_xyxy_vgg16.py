@@ -1,7 +1,7 @@
 import tensorflow as tf
 import numpy as np
 from lib.networks.network import Network
-from dagger_policy_base import DaggerPolicyBase
+from policies.base import DaggerPolicyBase
 from PIL import ImageDraw
 
 

@@ -1,5 +1,5 @@
 import tensorflow as tf
-from dagger_policy_base import DaggerPolicyBase
+from policies.base import DaggerPolicyBase
 
 #
 #

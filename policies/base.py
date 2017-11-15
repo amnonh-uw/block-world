@@ -15,14 +15,14 @@ class DaggerPolicyBase:
     def tf_resize(self, img, width, height):
         shape = tf.shape(img)
         if shape[0] != width or shape[1] != height:
-            print("resizing image to {},{}".format(width, height))
+            print("tf resizing image {} to {},{}".format(shape, width, height))
             img = tf.image.resize_images(img, [width, height])
 
         return img
 
     def im_resize(self, img, width, height):
         if width != img.width or height != img.height:
-            print("resizing image to {},{}".format(width, height))
+            print("tf resizing image from {},{}to {},{}".format(img.width, img.height, width, height))
             img = img.resize([width, height], Image.BILINEAR)
 
         return img
