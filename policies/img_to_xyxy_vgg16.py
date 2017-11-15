@@ -93,7 +93,9 @@ class DaggerPolicy(DaggerPolicyBase):
         if step != None:
             im = obs['centercam']
             draw = ImageDraw.Draw(im)
-            draw.rectangle([pos1, pos2])
+            l1 = (int(pos1[0], int(pos1[1]))
+            l2 = (int(pos2[0], intpos2[1]))
+            draw.rectangle((l1, l2))
             del draw
 
             im.save("enjoy" + str(step) + ".png")

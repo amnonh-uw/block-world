@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 from lib.networks.network import Network
 from policies.base import DaggerPolicyBase
-from PIL import ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 #
 #
@@ -78,7 +78,7 @@ class DaggerPolicy(DaggerPolicyBase):
         return tf.losses.mean_squared_error(self.positions, self.predicted_positions)
 
     @staticmethod
-    def print_results(obs, action, step=None):
+    def print_results(obs, action, iteration = None, step=None):
         pos1 = obs['finger_screen_pos']
         pos1 = pos1[0:2]
         act1 = action[0:2]
@@ -89,13 +89,26 @@ class DaggerPolicy(DaggerPolicyBase):
         print("finger screen pos: {} act {} delta {}".format(pos1, act1, pos1-act1))
         print("target screen pos: {} act {} delta {}".format(pos2, act2, pos2-act2))
 
-        if step != None:
+        if step != None and iteration :
+            # font = ImageFont.load_default()
+
             im = obs['centercam']
+            w,h = im.size
             draw = ImageDraw.Draw(im)
-            draw.rectangle([pos1, pos2])
+
+            l1 = (int(pos1[0]), h - int(pos1[1]))
+            l2 = (int(pos2[0]), h - int(pos2[1]))
+            draw.rectangle((l1, l2))
             del draw
 
-            im.save("enjoy" + str(step) + ".png")
+            big_im = Image.new("RGB", [w, h + 50])
+            big_im.paste(im)
+            draw = ImageDraw.Draw(big_im)
+            draw.text([0, h+2], "fD" + str(pos1-act1))
+            draw.text([0, h+25],"tD" + str(pos2-act2))
+            del draw
+
+            big_im.save("enjoy_" + str(step) + "_" + str(iteration) + ".png")
 
     def print_batch(self, batch):
         pass
