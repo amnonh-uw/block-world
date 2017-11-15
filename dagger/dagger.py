@@ -102,7 +102,7 @@ class Dagger:
 
                     action = self.action_hat.eval(feed_dict=feed_dict)
                     action = np.squeeze(action)
-                    self.policy.print_results(obs, action, step=steps)
+                    self.policy.print_results(obs, action, iteration = i, step=steps)
 
                     action = self.env.expert_action()
                     obs, r, done, _ = self.env.step(action)
@@ -120,9 +120,9 @@ class Dagger:
             if self.loss is not None:
                 self.train_step_op = tf.train.AdamOptimizer(learning_rate=1.0e-5).minimize(self.loss)
 
-    def build_test_graph(self, policy):
+    def build_test_graph(self):
         with tf.variable_scope("policy"):
-            self.policy.build(None)
+            self.policy.build_graph(None)
             self.action_hat  = self.policy.get_output()
 
     def save_policy(self, fname):
