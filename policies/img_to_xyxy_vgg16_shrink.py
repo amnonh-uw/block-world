@@ -17,8 +17,8 @@ class DaggerPolicy(DaggerPolicyBase):
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
 
-    def build(self, dir_name):
-        super().build(dir_name)
+    def build_graph(self, dir_name):
+        super().build_graph(dir_name)
 
         self.img1 = tf.placeholder(tf.float32, shape=[None, self.width, self.height, 3], name='img1')
         self.positions = tf.placeholder(tf.float32, shape=[None, 4], name='positions')

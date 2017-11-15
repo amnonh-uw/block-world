@@ -144,7 +144,7 @@ class Dagger:
 
     def expert_step(self):
         returns = []
-ƒ
+
         for i in range(self.num_rollouts):
             obs = self.env.reset()
             done = False

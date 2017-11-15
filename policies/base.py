@@ -4,7 +4,7 @@ import numpy as np
 from PIL import Image
 
 class DaggerPolicyBase:
-    def build(self, dir_name):
+    def build_graph(self, dir_name):
         if dir_name:
             os.makedirs(dir_name, exist_ok=True)
             self.path = dir_name + "/"

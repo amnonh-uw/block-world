@@ -11,8 +11,8 @@ from policies.base import DaggerPolicyBase
 class DaggerPolicy(DaggerPolicyBase):
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
-    def build(self, dir_name):
-        super().build(dir_name)
+    def build_graph(self, dir_name):
+        super().build_graph(dir_name)
 
     def print_batch(self, batch):
         pass
