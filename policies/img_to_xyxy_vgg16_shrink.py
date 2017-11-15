@@ -115,7 +115,7 @@ class DaggerPolicy(DaggerPolicyBase):
 
     def policy_initializer(self):
         # can't load - shrunk the net
-        self.base_network.load('vgg16.npy', tf.get_default_session(), ignore_missing=True)
+        # self.base_network.load('vgg16.npy', tf.get_default_session(), ignore_missing=True)
         pass
 
 
