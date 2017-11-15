@@ -16,7 +16,7 @@ class DaggerPolicy(DaggerPolicyBase):
     width = 224
     height = 224
     def __init__(self, dir_name):
-        super().__init(dir_name)
+        super().__init__(dir_name)
         self.img1 = tf.placeholder(tf.float32, shape=[None, width, height, 3], name='img1')
         self.positions = tf.placeholder(tf.float32, shape=[None, 4], name='position')
 
