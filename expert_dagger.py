@@ -13,7 +13,8 @@ def main(argv):
     env = make(**vars(x))
 
     policy_mod = import_module(args.policy_source)
-    policy = getattr(policy_mod, 'DaggerPolicy')
+    policy_class = getattr(policy_mod, 'DaggerPolicy')
+    policy = policy_class(**vars(args))
 
     args.iterations = 0
     print(args.num_rollouts)

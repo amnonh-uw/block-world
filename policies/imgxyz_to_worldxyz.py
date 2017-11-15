@@ -11,8 +11,11 @@ from policies.base import DaggerPolicyBase
 #
 
 class DaggerPolicy(DaggerPolicyBase):
-    def __init__(self, dir_name):
-        super().__init__(dir_name)
+    def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
+
+    def build(self, dir_name):
+        super().build(dir_name)
         self.positions = tf.placeholder(tf.float32, shape=[None, 6], name='screen_positions')
         self.action = tf.placeholder(tf.float32, name="action", shape=(None, 3))
 

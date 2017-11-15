@@ -4,7 +4,7 @@ import os
 import h5py
 
 class Dagger:
-    def __init__(self, env, policy_class, **kwargs):
+    def __init__(self, env, policy, **kwargs):
         self.render = True
         self.num_rollouts = 25
         self.batch_size = 25
@@ -19,7 +19,7 @@ class Dagger:
 
         self.__dict__.update(kwargs)
         self.env = env
-        self.policy_class = policy_class
+        self.policy = policy
 
         self.save_mean = []
         self.save_std = []
@@ -37,7 +37,7 @@ class Dagger:
     def learn_all_samples(self, save_file_name = None, load_file_name = None):
         if save_file_name is not None:
             self.save_file_name = save_file_name
-        self.build_graph(self.policy_class)
+        self.build_graph()
         samples = tf.train.match_filenames_once(self.dir_name + '/*.tfrecord')
         if self.max_samples is not None:
             samples = samples[0:self.max_steps]
@@ -56,7 +56,7 @@ class Dagger:
             self.save_policy(self.save_file_name)
 
     def learn(self, load_file_name = None):
-        self.build_graph(self.policy_class)
+        self.build_graph()
         self.expert_step()
 
         # record return and std for plotting
@@ -86,7 +86,7 @@ class Dagger:
         print(dagger_results)
 
     def test(self, load_file_name):
-        self.build_test_graph(self.policy_class)
+        self.build_test_graph()
         with tf.Session() as sess:
             self.load_policy(load_file_name)
 
@@ -112,17 +112,17 @@ class Dagger:
                     if steps >= self.max_steps:
                         break
 
-    def build_graph(self, policy_class):
+    def build_graph(self):
         with tf.variable_scope("policy"):
-            self.policy = policy_class(self.dir_name)
+            self.policy.build_graph(self.dir_name)
             self.action_hat = self.policy.get_output()
             self.loss = self.policy.get_loss()
             if self.loss is not None:
                 self.train_step_op = tf.train.AdamOptimizer(learning_rate=1.0e-5).minimize(self.loss)
 
-    def build_test_graph(self, policy_class):
+    def build_test_graph(self, policy):
         with tf.variable_scope("policy"):
-            self.policy = policy_class(None)
+            self.policy.build(None)
             self.action_hat  = self.policy.get_output()
 
     def save_policy(self, fname):
@@ -144,7 +144,7 @@ class Dagger:
 
     def expert_step(self):
         returns = []
-
+ƒ
         for i in range(self.num_rollouts):
             obs = self.env.reset()
             done = False

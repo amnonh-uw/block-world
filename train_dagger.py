@@ -12,7 +12,8 @@ def main(argv):
     env = make(**vars(env_args()))
 
     policy_mod = import_module(args.policy_source)
-    policy = getattr(policy_mod, 'DaggerPolicy')
+    policy_class = getattr(policy_mod, 'DaggerPolicy')
+    policy = policy_class(**vars(args))
 
     dagger = Dagger(env,
                     policy,
