@@ -9,7 +9,7 @@ def main(argv):
 
     x = env_args(args)
     print(x)
-    env = make(**vars(env_args()))
+    env = make(**vars(x))
 
     policy_mod = import_module(args.policy_source)
     policy_class = getattr(policy_mod, 'DaggerPolicy')
