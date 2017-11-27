@@ -9,11 +9,13 @@ def main(argv):
 
     x = env_args(args)
     print(x)
-    env = make(**vars(x))
 
     policy_mod = import_module(args.policy_source)
     policy_class = getattr(policy_mod, 'DaggerPolicy')
     policy = policy_class(**vars(args))
+
+    env = make(**vars(x))
+
 
     dagger = Dagger(env,
                     policy,
