@@ -27,9 +27,9 @@ class Dagger:
 
         self.samples = []
 
-    def add_sample(self,  obs, action, phase=None, rollout=None, step=None):
+    def add_sample(self,  obs, action):
         obs['action'] = action
-        sample = self.policy.save_sample(obs, phase, rollout, step)
+        sample = self.policy.save_sample(obs)
         if sample != None:
             self.samples.append(sample)
         return sample
@@ -155,7 +155,7 @@ class Dagger:
                 action = self.env.expert_action()
 
                 # data aggregation
-                path = self.add_sample(obs, action, phase=0, rollout=i, step=steps)
+                path = self.add_sample(obs, action)
                 if path is not None:
                     self.env.save_cams(path)
                 obs, r, done, _ = self.env.step(action)
