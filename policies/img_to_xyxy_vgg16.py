@@ -93,8 +93,8 @@ class DaggerPolicy(DaggerPolicyBase):
         if step != None:
             im = obs['centercam']
             draw = ImageDraw.Draw(im)
-            l1 = (int(pos1[0], int(pos1[1]))
-            l2 = (int(pos2[0], intpos2[1]))
+            l1 = (int(pos1[0]), int(pos1[1]))
+            l2 = (int(pos2[0]), int(pos2[1]))
             draw.rectangle((l1, l2))
             del draw
 
