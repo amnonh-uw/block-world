@@ -1,8 +1,8 @@
-import os
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
 import numpy as np
 from policies.base import DaggerPolicyBase
+from skimage import img_as_float
 
 #
 #
@@ -27,48 +27,29 @@ class DaggerPolicy(DaggerPolicyBase):
 
             conv1 = slim.conv2d(self.img1, 8, [3, 3], padding='VALID', scope='conv1')
             conv2 = slim.conv2d(conv1, 64, [3, 3], padding='VALID', scope='conv2')
-            flat1 = slim.flatten(conv1)
+            flat1 = slim.flatten(conv2)
             fc1 = slim.fully_connected(flat1, 128, scope='fc1')
             self.predicted_positions = slim.fully_connected(fc1, 2, scope='fc')
 
-    def train_sample_from_dict(self, sample_dict):
-        #
-        # This method must use tensorflow primitives
-        #
-        img1 = sample_dict['centercam']
-        img1 = tf.slice(img1, [0,0,0], [-1,-1,3])
-        img1 = tf.cast(img1, tf.float32)
-        # img1 = self.tf_resize(img1, self.width, self.height)
+    def loss_feed_dict(self, batch):
+        img1_batch = img_as_float(batch['centercam'])
+        img1_batch = img1_batch[:,:,:,0:3]
+        pos1_batch = batch['finger_screen_pos']
+        pos1_batch = pos1_batch[:,0:2]
 
-        pos1 = tf.slice(sample_dict['finger_screen_pos'], [0], [2])
-        # pos2 = tf.slice(sample_dict['target_screen_pos'], [0], [2])
+        return {
+            self.img1: img1_batch,
+            self.positions: pos1_batch}
 
-        positions = pos1
-
-        return (img1, positions)
-
-    def eval_sample_from_dict(self, sample_dict):
+    def eval_feed_dict(self, obs_dict):
         #
         # this method must use numpy primitives
         #
-        img1 = sample_dict['centercam']
-        # img1 = self.im_resize(img1, self.width, self.height)
-        img1 = np.asarray(img1)
-        img1 = img1[:,:,0:3]
+        img1 = img_as_float(obs_dict['centercam'])
+        img1 = img1[:, :, 0:3]
         img1 = np.expand_dims(img1, axis=0)
 
-        return (img1,)
-
-    def loss_feed_dict(self, batch):
-        return {
-            self.img1: batch[0],
-            self.positions: batch[1]}
-
-    def eval_feed_dict(self, obs_dict):
-        sample = self.eval_sample_from_dict(obs_dict)
-        return {
-            self.img1: sample[0]
-        }
+        return { self.img1: img1 }
 
     def get_output(self):
         return self.predicted_positions
@@ -77,10 +58,8 @@ class DaggerPolicy(DaggerPolicyBase):
         return tf.losses.mean_squared_error(self.positions, self.predicted_positions)
 
     def print_batch(self, batch):
-        imgs = batch[0]
-        positions = batch[1]
-        for i in range(imgs.shape[0]):
-            pass
+        # print("batch keys {}".format(list(batch.keys())))
+        pass
 
     def policy_initializer(self):
         pass
