@@ -41,7 +41,7 @@ def env_args(args):
     env_args.stereo_distance=0.5
     env_args.step_size = 0.1
     env_args.reach_minimum = 0.1
-    env_args.verbose = True
+    env_args.verbose = False
     env_args.run = True
     env_args.width = args.width
     env_args.height = args.height

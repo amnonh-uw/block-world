@@ -30,3 +30,4 @@ dist_world/dagger_dist_world/
 *.swp
 *.npy
 dagger_block_world
+*.tar
