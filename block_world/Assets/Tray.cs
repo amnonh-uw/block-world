@@ -481,8 +481,8 @@ public class Tray : MonoBehaviour
         
             if (action != null) {
                 CommandCounter += 1;
-                if (CommandCounter % 100 == 0)
-                    Debug.LogFormat ("Total Memory use {0}", System.GC.GetTotalMemory (true));
+                // if (CommandCounter % 100 == 0)
+                //    Debug.LogFormat ("Total Memory use {0}", System.GC.GetTotalMemory (true));
             }
 
             if (action == "clear_tray")
