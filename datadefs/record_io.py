@@ -34,7 +34,7 @@ class record_io:
         if tf_dtype == "img8":
             return(np.uint8)
         if tf_dtype == "img16":
-            return(np.uint16)
+            return(np.int32)
 
         if tf_dtype == tf.float32:
             return(np.float32)
