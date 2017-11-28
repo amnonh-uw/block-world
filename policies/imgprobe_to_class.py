@@ -39,11 +39,10 @@ class DaggerPolicy(DaggerPolicyBase):
         img1_batch = img_as_float(batch['centercam'])
         img1_batch = img1_batch[:,:,:,0:3]
         probe_batch = batch['probe_direction']
-        no_collision = batch['no_collision']
-        target_collison = batch['target_collision']
-        object_collision = batch['object_collision']
-        print("no_collision shape {}".format(no_collision.shape))
-        class_onehot = np.stack((no_collision, target_collison, object_collision))
+        no_collision = np.squeeze(batch['no_collision'])
+        target_collison = np.squeeze(batch['target_collision'])
+        object_collision = np.squeeze(batch['object_collision'])
+        class_onehot = np.stack((no_collision, target_collison, object_collision), axis=-1)
 
         return {
             self.img1: img1_batch,
