@@ -5,9 +5,10 @@ from PIL import Image
 
 class record_io:
     def __init__(self, dir_name, type_dict):
-        os.makedirs(dir_name, exist_ok=True)
-        self.path = dir_name + "/"
-        self.sample_counter = 0
+        if dir_name != None:
+            os.makedirs(dir_name, exist_ok=True)
+            self.path = dir_name + "/"
+            self.sample_counter = 0
         self.type_dict = type_dict
 
     def make_sample_path(self):
@@ -20,8 +21,11 @@ class record_io:
 
     def get_dtype(self, np_dtype, type_dict, key):
         tf_dtype = type_dict[key]
-        if np_dtype == np.uint8 and tf_dtype == tf.uint8:
+        if np_dtype == np.uint8 and tf_dtype == "img8":
             return(np_dtype)
+
+        if np_dtype == np.uint8 and tf_dtype == tf.uint8:
+            return (np_dtype)
 
         if np_dtype == np.float32 and tf_dtype == tf.float32:
             return(np_dtype)
@@ -29,10 +33,26 @@ class record_io:
         if np_dtype == np.float64 and tf_dtype == tf.float32:
             return(np.float32)
 
-        if np_dtype == np.uint16 and tf_dtype == tf.int32:
+        if np_dtype == np.uint16 and tf_dtype == "img16":
+            return np.int32
+
+        if np_dtype == np.bool and tf_dtype == tf.int32:
             return np.int32
 
         raise ValueError("{} does not match {} for key {}".format(np_dtype, tf_dtype, key))
+
+    def np_dtype_from_tf_dtype(self, tf_dtype):
+        if tf_dtype == tf.uint8 or tf_dtype == "img8":
+            return np.uint8
+        if tf_dtype == "img16":
+            return np.int32
+        if tf_dtype == tf.float32:
+            return np.float32
+        if tf_dtype == tf.int32:
+            return np.int32
+
+        raise ValueError("unknown dtype {}".format(tf_dtype))
+
 
     @staticmethod
     def int64_feature(value):
@@ -60,8 +80,8 @@ class record_io:
         sample[key] = tf.reshape(a, a_shape, name='reshape_array_' + key)
 
     def np_decode_ndarray(self, key, sample, feature):
-        a = np.fromstring(feature[key].bytes_list.value[0], dtype=self.type_dict[key])
-        a_shape = np.fromstring(feature[key].bytes_list.value[0], dtype=np.int32)
+        a = np.fromstring(feature[key].bytes_list.value[0], dtype=self.np_dtype_from_tf_dtype(self.type_dict[key]))
+        a_shape = np.fromstring(feature[key + '_shape'].bytes_list.value[0], dtype=np.int32)
         sample[key] = np.reshape(a, a_shape)
 
     def encode_image(self, img, key, feature):
@@ -73,12 +93,17 @@ class record_io:
 
         for key in self.type_dict:
             if key not in sample:
+                print(list(sample.keys()))
                 raise ValueError("key {} is not in sample".format(key))
             field = sample[key]
             if isinstance(field, Image.Image):
                 self.encode_image(field, key, feature)
             elif isinstance(field, np.ndarray):
                 self.encode_ndarray(field, key, feature)
+            elif isinstance(field, bool):
+                self.encode_ndarray(np.full(1, field), key, feature)
+            elif isinstance(field, float):
+                self.encode_ndarray(np.full(1, field), key, feature)
             else:
                 raise ValueError("dont know how to encode type " + str(type(field)))
 
@@ -89,6 +114,7 @@ class record_io:
         sample = dict()
         for key in self.type_dict:
             if key not in feature:
+                print(list(example.keys()))
                 raise ValueError("key {} is not in example".format(key))
             self.np_decode_ndarray(key, sample, feature)
 
@@ -104,7 +130,7 @@ class record_io:
 
     def load_sample(self, path):
         record_iterator = tf.python_io.tf_record_iterator(path=path)
-        string_record = record_iterator.next()
+        string_record = next(record_iterator, None)
         example = tf.train.Example()
         example.ParseFromString(string_record)
         sample = self.decode_sample(example)

@@ -1,4 +1,5 @@
 import tensorflow as tf
+import sys
 
 def get_type_dict():
     type_dict = dict()
@@ -16,3 +17,8 @@ def get_type_dict():
     type_dict['action'] = tf.float32
 
     return type_dict
+
+
+from dump import dump
+if __name__ == "__main__":
+    dump(sys.argv[1], get_type_dict())
