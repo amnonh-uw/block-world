@@ -31,6 +31,8 @@ class env:
         if params_args != None:
             self.set_params(**params_args)
 
+        self.obs = dict()
+
     def run(self):
         if self.is_running():
             print("run - its already running, do not run again")
@@ -109,6 +111,9 @@ class env:
             # combine to a string
             return ",".join(args_arrstr)
 
+        if type(args) is float:
+            return(str(args))
+
         print("unknwon data type {} in make_string".format(type(args)))
         return None
 
@@ -175,6 +180,11 @@ class env:
         r = self.do("move_finger", str(inc_pose))
         self.extract_response(r.json())
 
+    def probe_finger(self, direction):
+        direction = self.round_pose(direction)
+        r = self.do("probe_finger", str(direction))
+        self.extract_response(r.json())
+
     def check_occupied(self, inc_pose):
         r = self.do("check_occupied", self.make_string(inc_pose))
         return self.extract_bool(r.json(), "b")
@@ -208,6 +218,12 @@ class env:
     def extract_float(self, data, key):
         if key in data:
             return float(data[key])
+        else:
+            return None
+
+    def extract_string(self, data, key):
+        if key in data:
+            return str(data[key])
         else:
             return None
 
@@ -254,36 +270,31 @@ class env:
         return depth_img
 
     def extract_response(self, data):
-        self.leftcam = self.extract_cam(data, "leftcam")
-        self.rightcam = self.extract_cam(data, "rightcam")
-        self.centercam = self.extract_cam(data, "centercam")
+        self.obs['leftcam'] = self.leftcam = self.extract_cam(data, "leftcam")
+        self.obs['rightcam'] = self.rightcam = self.extract_cam(data, "rightcam")
+        self.obs['centercam'] = self.centercam = self.extract_cam(data, "centercam")
         self.depthcam = self.extract_cam(data, "depthcam")
         self.raw_multdepthcam = self.extract_cam(data, "multichanneldepthcam")
-        self.multichanneldepthcam = self.decode_twochanneldepth(self.raw_multdepthcam)
-        self.normalcam = self.extract_cam(data, "normalcam");
-        self.target_pos = self.extract_vector3(data, "target_pos")
-        self.finger_pos = self.extract_vector3(data, "finger_pos")
-        self.finger_screen_pos = self.extract_vector3(data, "finger_screen_pos")
-        self.target_screen_pos = self.extract_vector3(data, "target_screen_pos")
-        self.target_rot = self.extract_vector3(data, "target_rot")
-        self.finger_rot = self.extract_vector3(data, "finger_rot")
-        self.collision = self.extract_bool(data, "collision")
+        self.obs['multichanneldepthcam'] = self.multichanneldepthcam = self.decode_twochanneldepth(self.raw_multdepthcam)
+        self.obs['normalcam'] = self.normalcam = self.extract_cam(data, "normalcam");
+        self.obs['target_pos'] = self.target_pos = self.extract_vector3(data, "target_pos")
+        self.obs['finger_pos'] = self.finger_pos = self.extract_vector3(data, "finger_pos")
+        self.obs['finger_screen_pos'] = self.finger_screen_pos = self.extract_vector3(data, "finger_screen_pos")
+        self.obs['target_screen_pos'] = self.target_screen_pos = self.extract_vector3(data, "target_screen_pos")
+        self.obs['target_rot'] = self.target_rot = self.extract_vector3(data, "target_rot")
+        self.obs['finger_rot'] = self.finger_rot = self.extract_vector3(data, "finger_rot")
+        self.obs['no_collision'] =  self.no_collision = self.extract_bool(data, "no_collision")
+        self.collision = not self.no_collision
+        self.obs['target_collision'] = self.target_collision = self.extract_bool(data, "target_collision")
+        self.obs['object_collision'] = self.object_collision = self.extract_bool(data, "object_collision")
+        self.obs['collision_name'] = self.collision_name = self.extract_string(data, "collision_name")
+        self.obs['collision_point'] = self.collision_point = self.extract_vector3(data, "collision_point")
+        self.obs['collision_distance'] = self.collision_distance = self.extract_float(data, "collision_distance")
+        self.obs['collision_screen_point'] = self.collision_screen_point = self.extract_vector3(data, "collision_screen_point")
+
 
     def obs_dict(self):
-        obs = dict()
-        obs['leftcam'] = self.leftcam
-        obs['rightcam'] = self.rightcam
-        obs['centercam'] = self.centercam
-        obs['multichanneldepthcam'] = self.multichanneldepthcam
-        obs['normalcam'] = self.normalcam
-        obs['target_pos'] = self.target_pos
-        obs['target_rot'] = self.target_rot
-        obs['target_screen_pos'] = self.target_screen_pos
-        obs['finger_pos'] = self.finger_pos
-        obs['finger_rot'] = self.finger_rot
-        obs['finger_screen_pos'] = self.finger_screen_pos
-
-        return obs
+        return self.obs
 
     def clean_split(self, s, delim):
         s = s.replace(" ", "")
@@ -321,7 +332,7 @@ def env_test(argv):
     d = _display(show_obs=cmd_args.show_obs)
 
     if cmd_args.reset:
-        x.reset(tray_length=3.0, tray_width=2.0, stereo_distance=0.5, width=800, height=800)
+        x.reset(tray_length=3.0, tray_width=2.0, stereo_distance=0.5, width=224, height=224)
         d.show(x)
 
     var_dict = dict()
@@ -374,12 +385,34 @@ def env_test(argv):
             x.move_finger(args)
             d.show(x)
 
+        def do_probe_finger(self, args):
+            x.probe_finger(args)
+            d.show(x)
+
         def do_move_cams(self, args):
             x.move_cams(args)
             d.show(x)
 
         def do_res(self, args):
             x.res(args)
+
+        def do_up(self, args):
+            x.move_finger("0,0.1,0")
+
+        def do_down(self, args):
+            x.move_finger("0,-0.1,0")
+
+        def do_left(self, args):
+            x.move_finger("-0.1,0,0")
+
+        def do_right(self, args):
+            x.move_finger("0.1,0,0")
+
+        def do_forward(self, args):
+            x.move_finger("0,0,0.1")
+
+        def do_back(self, args):
+            x.move_finger("0,0,-0.1")
 
         def do_next_expert_step(self, args):
             print(find_next_step(x, x.target_pos, step_size=0.1, reach_minimum=0.1))
@@ -417,9 +450,15 @@ class _display:
 
     def show(self, env):
         env.save_cams("/tmp/")
-        if self.show_obs:
-            if env.collision:
-                print("BOOM")
+        if env.collision:
+            if env.object_collision:
+                print("object collision")
+            if env.target_collision:
+                print("target collision")
+            print("collision_name: {}".format(env.collision_name))
+            print("collision_point: {}".format(env.collision_point))
+            print("collision_screen_point: {}".format(env.collision_screen_point))
+            print("collision_distance: {}".format(env.collision_distance))
 
 if __name__ == "__main__":
     env_test(sys.argv[1:])

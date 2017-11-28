@@ -25,17 +25,31 @@ class BlockWorldEnv(gym.Env):
         kwargs.pop("verbose", None)
 
         self.block_env = make_env(run=self.run, verbose=True, params_args=kwargs)
+        self.action = None
+        self.probe_direction = None
 
     def obs(self):
-        return self.block_env.obs_dict()
+        obs_dict = self.block_env.obs_dict()
+        if self.action is not None:
+            obs_dict['action'] = self.action
+        if self.probe_direction is not None:
+            obs_dict['probe_direction'] = self.probe_direction
+
+        return obs_dict
 
     def expert_action(self):
         dist =  self.block_env.target_pos - self.block_env.finger_pos
+        self.action = dist
         return dist
 
     def target_reached(self):
         dist = abs(self.block_env.finger_pos - self.block_env.target_pos)
         return (dist > self.reach_minimum).sum() == 0
+
+    def random_probe(self):
+        self.probe_direction = np.random.random_sample(size=3) - 0.5
+        self.block_env.probe_finger(self.probe_direction)
+        return self.obs()
 
     def _step(self, action):
         def step_range(x):
