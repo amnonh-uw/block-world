@@ -7,6 +7,7 @@ class Dagger:
     def __init__(self, env, policy, **kwargs):
         self.render = True
         self.num_rollouts = 25
+        self.num_probes = 0
         self.batch_size = 25
         self.epochs = 10
         self.iterations = 50
@@ -27,8 +28,7 @@ class Dagger:
 
         self.samples = []
 
-    def add_sample(self,  obs, action):
-        obs['action'] = action
+    def add_sample(self,  obs):
         sample = self.policy.save_sample(obs)
         if sample != None:
             self.samples.append(sample)
@@ -52,12 +52,16 @@ class Dagger:
             else:
                 self.load_policy(load_file_name)
 
-            self.train_step(dataset)
+            self.train_policy(dataset)
             self.save_policy(self.save_file_name)
 
-    def learn(self, load_file_name = None):
+    def explore_only(self):
         self.build_graph()
-        self.expert_step()
+        self.explore_expert()
+
+    def explore_learn(self, load_file_name = None):
+        self.build_graph()
+        self.explore_expert()
 
         # record return and std for plotting
         self.save_mean = []
@@ -74,10 +78,10 @@ class Dagger:
 
             for i in range(self.iterations):
                 print("DAgger iteration {}".format(i))
-                self.train_step()
+                self.train_policy()
                 self.save_policy(self.save_file_name)
                 self.load_policy(self.save_file_name)
-                self.test_step(iter=i+1)
+                self.explore_policy(iter=i+1)
 
         dagger_results = {'means': self.save_mean, 'stds': self.save_std, 'train_size': self.save_train_size,
                           'expert_mean': self.save_expert_mean, 'expert_std': self.save_expert_std}
@@ -118,7 +122,7 @@ class Dagger:
             self.action_hat = self.policy.get_output()
             self.loss = self.policy.get_loss()
             if self.loss is not None:
-                self.train_step_op = tf.train.AdamOptimizer(learning_rate=1.0e-5).minimize(self.loss)
+                self.train_op = tf.train.AdamOptimizer(learning_rate=1.0e-5).minimize(self.loss)
 
     def build_test_graph(self):
         with tf.variable_scope("policy"):
@@ -142,7 +146,7 @@ class Dagger:
         saver = tf.train.Saver(tf.trainable_variables())
         saver.restore(tf.get_default_session(), fname)
 
-    def expert_step(self):
+    def explore_expert(self):
         returns = []
 
         for i in range(self.num_rollouts):
@@ -152,13 +156,17 @@ class Dagger:
             steps = 0
 
             while not done:
-                action = self.env.expert_action()
+                expert_action = self.env.expert_action()
 
-                # data aggregation
-                path = self.add_sample(obs, action)
-                if path is not None:
-                    self.env.save_cams(path)
-                obs, r, done, _ = self.env.step(action)
+                if self.num_probes != 0:
+                    for i in range(self.num_probes):
+                        obs = self.env.random_probe()
+                        self.add_sample(obs)
+                else:
+                    # data aggregation
+                    self.add_sample(obs)
+
+                obs, r, done, _ = self.env.step(expert_action)
                 totalr += r
                 steps += 1
                 if self.render:
@@ -186,7 +194,7 @@ class Dagger:
         return dataset
 
 
-    def train_step(self, dataset = None):
+    def train_policy(self, dataset = None):
         dataset = self.train_dataset(dataset)
         iterator = dataset.make_initializable_iterator()
         get_next = iterator.get_next()
@@ -202,7 +210,7 @@ class Dagger:
                 batch = sess.run(get_next)
                 self.policy.print_batch(batch)
                 feed_dict = self.policy.loss_feed_dict(batch)
-                _, loss = sess.run([self.train_step_op, self.loss], feed_dict=feed_dict)
+                _, loss = sess.run([self.train_op, self.loss], feed_dict=feed_dict)
                 step += 1
                 if (step % self.report_frequency == 0):
                     print ("train step {} objective batch loss {}".format(step, loss))
@@ -213,7 +221,7 @@ class Dagger:
             except tf.errors.OutOfRangeError:
                 break
 
-    def test_step(self, iter=None):
+    def explore_policy(self, iter=None):
         returns = []
 
         train_size = len(self.samples)
@@ -233,7 +241,7 @@ class Dagger:
                 expert_action = self.env.expert_action()
 
                 # data aggregation
-                path = self.add_sample(obs, expert_action, phase=iter, rollout=i, step=steps)
+                path = self.add_sample(obs)
                 if path is not None:
                     self.env.save_cams(path)
 
