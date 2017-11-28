@@ -34,9 +34,7 @@ class Dagger:
             self.samples.append(sample)
         return sample
 
-    def learn_all_samples(self, save_file_name = None, load_file_name = None):
-        if save_file_name is not None:
-            self.save_file_name = save_file_name
+    def learn_all_samples(self,  load_file_name = None):
         self.build_graph()
         samples = tf.train.match_filenames_once(self.dir_name + '/*.tfrecord')
         if self.max_samples is not None:
