@@ -11,6 +11,7 @@ class Dagger:
         self.batch_size = 25
         self.epochs = 10
         self.iterations = 50
+        self.learning_rate = 1.0e-5
         self.report_frequency = 1000
         self.save_frequency = 5000
         if env is not None:
@@ -120,7 +121,7 @@ class Dagger:
             self.action_hat = self.policy.get_output()
             self.loss = self.policy.get_loss()
             if self.loss is not None:
-                self.train_op = tf.train.AdamOptimizer(learning_rate=1.0e-5).minimize(self.loss)
+                self.train_op = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
 
     def build_test_graph(self):
         with tf.variable_scope("policy"):
