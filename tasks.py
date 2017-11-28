@@ -1,9 +1,9 @@
+from invoke import task
 import subprocess
 import shlex
 import platform
 import tempfile
 import re
-import sys
 
 
 def pci_records():
@@ -60,7 +60,8 @@ EndSection
 
     return "\n".join(xorg_conf)
 
-def startx(device_num, display):
+@task
+def startx(context, device_num, display):
     import os
     display = int(display)
     if platform.system() != 'Linux':
@@ -80,22 +81,3 @@ def startx(device_num, display):
     finally:
         os.close(fd)
         os.unlink(path)
-
-
-if __name__ == "__main__":
-    argv = sys.argv
-    if len(argv) == 1:
-        device = 0
-        disp = 15
-    if len(argv) == 2:
-        device = int(argv[1])
-        disp = 15
-    if len(argv) == 3:
-        device = int(argv[1])
-        disp = int(argv[2])
-
-    print("starting X on device {} display {}".format(device, disp))
-
-    startx(device, disp)
-
-    print("export DISPLAY=:{}.0", disp)
