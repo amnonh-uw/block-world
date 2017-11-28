@@ -16,8 +16,9 @@ def get_type_dict():
     type_dict['finger_screen_pos'] = tf.float32
     type_dict['action'] = tf.float32
     type_dict['probe_direction'] = tf.float32
-    type_dict['collision'] = tf.int32
-    type_dict['collision_target'] = tf.int32
+    type_dict['no_collision'] = tf.int32
+    type_dict['target_collision'] = tf.int32
+    type_dict['object_collision'] = tf.int32
     type_dict['collision_point'] = tf.float32
     type_dict['collision_distance'] = tf.float32
     type_dict['collision_screen_point'] = tf.float32
