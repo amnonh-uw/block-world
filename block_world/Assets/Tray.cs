@@ -54,6 +54,7 @@ public class Tray : MonoBehaviour
     float Speed = 0.1f;
 
 	public bool CollisionHappened;
+	RaycastHit  CollisionInfo;
 
 	int CommandCounter;
 
@@ -520,13 +521,24 @@ public class Tray : MonoBehaviour
             {
                 Pose p = new Pose (args);
 
-                if (CollisionCheck(finger, p)) {
+				//
+				// Only move if not colliding
+				//
+				if (CollisionCheck(finger, p, p.position.magnitude)) {
                     finger.transform.position += p.position;
                     finger.transform.Rotate (p.rotation);
                 }
                 takeCameraShot = true;
                 return;
             }
+
+			if (action == "probe_finger") {
+				Pose p = new Pose (args);
+
+				CollisionCheck (finger, p);
+				takeCameraShot = true;
+				return;
+			}
 
             if (action == "check_occupied") {
                 Pose p = new Pose (args);
@@ -540,7 +552,10 @@ public class Tray : MonoBehaviour
             {
                 Pose p = new Pose (args);
 
-                if (CollisionCheck(Camera.main.gameObject, p)) {
+				//
+				// Only move if not colliding
+				//
+				if (CollisionCheck(Camera.main.gameObject, p, p.position.magnitude)) {
                     Camera.main.transform.position += p.position;
                     Camera.main.transform.Rotate (p.rotation);
                 }
@@ -587,16 +602,44 @@ public class Tray : MonoBehaviour
         }
     }
 
-	bool CollisionCheck(GameObject g, Pose p)
+	bool CollisionCheck(GameObject g, Pose p, float maxDistance = Mathf.Infinity)
 	{
+		if (CollisionHappened)
+			Debug.Log ("CollisionHappened true on entering CollisionCheck");
+		
 		Vector3 direction = p.position;
-		float distance = p.position.magnitude;
+		RaycastHit hitInfo;
+		Collider gCollider = g.GetComponent(typeof(Collider)) as Collider;
+		bool hit;
 
-		if (Physics.Raycast (g.transform.position, direction, distance)) {
-			CollisionHappened = true;
-			return false;
+		if (gCollider == null) {
+			Debug.LogFormat ("CollisionCheck: {} has no collider", g.name);
+			hit = Physics.Raycast (g.transform.position,
+				direction,
+				out hitInfo,
+				maxDistance);
+		} else {
+			hit = Physics.BoxCast (gCollider.bounds.center,
+				gCollider.bounds.extents,
+				direction,
+				out hitInfo,
+				g.transform.rotation,
+				maxDistance);
 		}
-		return true;
+
+		if (hit) {
+			CollisionHappened = true;
+			if (hitInfo.collider == null)
+				Debug.Log ("Collision occured but collder is null!");
+			else
+				Debug.LogFormat ("collided with {0}", hitInfo.collider.name);
+			
+			CollisionInfo = hitInfo;
+		} else {
+			CollisionHappened = false;
+        }
+
+		return !hit;
 	}
 
     bool OccupancyCheck(Pose p, Vector3 size) {
@@ -627,7 +670,13 @@ public class Tray : MonoBehaviour
         public Vector3 target_pos;
 		public Vector3 target_rot;
 		public Vector3 target_screen_pos;
-		public bool collision;
+		public bool no_collision;
+        public bool target_collision;
+        public bool object_collision;
+		public string collision_name;
+		public Vector3 collision_point;
+		public Vector3 collision_screen_point;
+		public float collision_distance;
     }
 
  	byte[] ScreenShot(Camera cam)
@@ -686,7 +735,28 @@ public class Tray : MonoBehaviour
 			r.target_pos = target.transform.position;
 			r.target_rot = target.transform.rotation.eulerAngles;
 			r.target_screen_pos = centercam.WorldToScreenPoint (target.transform.position);
-			r.collision = CollisionHappened;
+
+			if (CollisionHappened) {
+				if (CollisionInfo.collider == null)
+					Debug.Log ("Collision occured but collder is null");
+				
+                r.no_collision = false;
+                r.target_collision = CollisionInfo.collider.name == "Target";
+                r.object_collision = !r.target_collision;
+				r.collision_name = CollisionInfo.collider.name;
+				r.collision_point = CollisionInfo.point;
+				r.collision_screen_point = centercam.WorldToScreenPoint (CollisionInfo.point);
+				r.collision_distance = CollisionInfo.distance;
+			} else {
+                r.no_collision = true;
+                r.target_collision = false;
+                r.object_collision = false;
+				r.collision_name = "";
+				r.collision_point = Vector3.zero;
+				r.collision_distance = 0;
+			}
+
+			CollisionHappened = false;
 
 			// Debug.LogFormat ("Colission: {0}", CollisionHappened);
 
