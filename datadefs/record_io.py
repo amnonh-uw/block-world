@@ -19,40 +19,33 @@ class record_io:
             sample_path = self.path + "s" + str(self.sample_counter) + ".tfrecord"
         return sample_path
 
-    def get_dtype(self, np_dtype, type_dict, key):
-        tf_dtype = type_dict[key]
-        if np_dtype == np.uint8 and tf_dtype == "img8":
-            return(np_dtype)
+    def get_tf_dtype(self, key):
+        tf_dtype = self.type_dict[key]
+        if tf_dtype == "img8":
+            return tf.uint8
 
-        if np_dtype == np.uint8 and tf_dtype == tf.uint8:
-            return (np_dtype)
+        if tf_dtype == "img16":
+            return tf.int32
 
-        if np_dtype == np.float32 and tf_dtype == tf.float32:
-            return(np_dtype)
+        return tf_dtype
 
-        if np_dtype == np.float64 and tf_dtype == tf.float32:
+    def get_np_dtype(self, key):
+        tf_dtype = self.type_dict[key]
+        if tf_dtype == "img8":
+            return(np.uint8)
+        if tf_dtype == "img16":
+            return(np.uint16)
+
+        if tf_dtype == tf.float32:
             return(np.float32)
 
-        if np_dtype == np.uint16 and tf_dtype == "img16":
-            return np.int32
-
-        if np_dtype == np.bool and tf_dtype == tf.int32:
-            return np.int32
-
-        raise ValueError("{} does not match {} for key {}".format(np_dtype, tf_dtype, key))
-
-    def np_dtype_from_tf_dtype(self, tf_dtype):
-        if tf_dtype == tf.uint8 or tf_dtype == "img8":
-            return np.uint8
-        if tf_dtype == "img16":
-            return np.int32
         if tf_dtype == tf.float32:
-            return np.float32
+            return(np.float32)
+
         if tf_dtype == tf.int32:
             return np.int32
 
-        raise ValueError("unknown dtype {}".format(tf_dtype))
-
+        raise ValueError("can't map {} for to numpy key {}".format(tf_dtype, key))
 
     @staticmethod
     def int64_feature(value):
@@ -63,8 +56,8 @@ class record_io:
         return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
 
     def encode_ndarray(self, a, key, feature):
-        dtype = self.get_dtype(a.dtype, self.type_dict, key)
-        a = a.astype(dtype)
+        np_dtype = self.get_np_dtype(key)
+        a = a.astype(np_dtype)
         feature[key] = record_io.bytes_feature(a.tobytes())
         img_array_shape = np.array(a.shape, np.int32)
         feature[key + '_shape'] = record_io.bytes_feature(img_array_shape.tobytes())
@@ -75,12 +68,14 @@ class record_io:
         feat[key + '_shape'] = tf.FixedLenFeature([], tf.string)
 
     def tf_decode_ndarray(self, key, sample, features):
-        a = tf.decode_raw(features[key], self.type_dict[key])
+        dtype = self.get_tf_dtype(key)
+        a = tf.decode_raw(features[key], dtype)
         a_shape = tf.decode_raw(features[key + '_shape'], tf.int32)
         sample[key] = tf.reshape(a, a_shape, name='reshape_array_' + key)
 
     def np_decode_ndarray(self, key, sample, feature):
-        a = np.fromstring(feature[key].bytes_list.value[0], dtype=self.np_dtype_from_tf_dtype(self.type_dict[key]))
+        np_dtype = self.get_np_dtype(key)
+        a = np.fromstring(feature[key].bytes_list.value[0], dtype=np_dtype)
         a_shape = np.fromstring(feature[key + '_shape'].bytes_list.value[0], dtype=np.int32)
         sample[key] = np.reshape(a, a_shape)
 
