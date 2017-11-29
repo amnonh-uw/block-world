@@ -22,10 +22,10 @@ class DaggerPolicy(DaggerPolicyBase):
     def build_graph(self, dir_name):
         super().build_graph(dir_name)
 
-        self.img1 = tf.placeholder(tf.float32, shape=[None, self.width, self.height, 3], name='img1')
+        self.img = tf.placeholder(tf.float32, shape=[None, self.width, self.height, 3], name='img')
         self.positions = tf.placeholder(tf.float32, shape=[None, 4], name='positions')
 
-        inputs = {'img1': self.img1 }
+        inputs = {'img': self.img }
         self.base_network = alexnet(inputs)
         self.predicted_positions = tf.contrib.layers.fully_connected(inputs=self.base_network.get_output("fc7"), num_outputs=4,
                                                                      activation_fn=None, scope='predict_positions')
@@ -45,7 +45,7 @@ class DaggerPolicy(DaggerPolicyBase):
         positions = np.concatenate((pos1, pos2), axis=1)
 
         return {
-            self.img1: centercam,
+            self.img: centercam,
             self.positions: positions}
 
     def eval_feed_dict(self, obs):
@@ -54,7 +54,7 @@ class DaggerPolicy(DaggerPolicyBase):
         centercam = centercam[:,:,:,0:3]
         centercam = img_as_float(centercam)
 
-        return { self.img1: centercam } 
+        return { self.img: centercam } 
 
     def get_output(self):
         return self.predicted_positions
@@ -100,7 +100,7 @@ class alexnet(Network):
         self.setup()
 
     def setup(self):
-        (self.feed('data')
+        (self.feed('img')
              .conv(11, 11, 96, 4, 4, padding='VALID', name='conv1')
              .lrn(2, 2e-05, 0.75, name='norm1')
              .max_pool(3, 3, 2, 2, padding='VALID', name='pool1')
