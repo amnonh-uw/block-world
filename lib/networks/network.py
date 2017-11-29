@@ -154,7 +154,7 @@ class Network(object):
                 input_groups = tf.split(input, group, axis=3)
                 kernel_groups = tf.split(kernel, group, axis=3)
                 output_groups = [convolve(i, k) for i,k in zip(input_groups, kernel_groups)]
-                output = tf.concat(3, output_groups)
+                output = tf.concat(output_groups, axis=3)
             # Add the biases
             if biased:
                 init_biases = tf.constant_initializer(0.0)
