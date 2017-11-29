@@ -15,13 +15,15 @@ def main(argv):
     env = make(**vars(x))
 
     args.iterations = 0
+    args.num_rollouts = 250
     print(args.num_rollouts)
 
     dagger = Dagger(env,
                     policy,
                     **vars(args))
 
-    dagger.learn()
+    dagger.num_probes = 0
+    dagger.explore_only()
 
     env.close()
 
