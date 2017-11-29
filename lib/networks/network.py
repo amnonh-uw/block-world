@@ -151,8 +151,8 @@ class Network(object):
             if group==1:
                 output = convolve(input, kernel)
             else:
-                input_groups = tf.split(3, group, input)
-                kernel_groups = tf.split(3, group, kernel)
+                input_groups = tf.split(input, group, axis=3)
+                kernel_groups = tf.split(kernel, group, axis=3)
                 output_groups = [convolve(i, k) for i,k in zip(input_groups, kernel_groups)]
                 output = tf.concat(3, output_groups)
             # Add the biases
