@@ -101,15 +101,15 @@ class alexnet(Network):
 
     def setup(self):
         (self.feed('img')
-             .conv(11, 11, 96, 4, 4, padding='VALID', name='conv1')
+             .conv(11, 11, 96, 4, 4, padding='VALID', name='conv1', c_i=3)
              .lrn(2, 2e-05, 0.75, name='norm1')
              .max_pool(3, 3, 2, 2, padding='VALID', name='pool1')
-             .conv(5, 5, 256, 1, 1, group=2, name='conv2')
+             .conv(5, 5, 256, 1, 1, group=2, name='conv2', c_i=96)
              .lrn(2, 2e-05, 0.75, name='norm2')
              .max_pool(3, 3, 2, 2, padding='VALID', name='pool2')
-             .conv(3, 3, 384, 1, 1, name='conv3')
-             .conv(3, 3, 384, 1, 1, group=2, name='conv4')
-             .conv(3, 3, 256, 1, 1, group=2, name='conv5')
+             .conv(3, 3, 384, 1, 1, name='conv3', c_i=256)
+             .conv(3, 3, 384, 1, 1, group=2, name='conv4', c_i=384)
+             .conv(3, 3, 256, 1, 1, group=2, name='conv5', c_i=384)
              .max_pool(3, 3, 2, 2, padding='VALID', name='pool5'))
 
         (self.feed('pool5')
