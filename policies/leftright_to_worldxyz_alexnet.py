@@ -36,7 +36,7 @@ class DaggerPolicy(DaggerPolicyBase):
         leftcam = leftcam[:,:,:,0:3]
         leftcam = img_as_float(leftcam)
 
-        rightcam = batch['rightcam`']
+        rightcam = batch['rightcam']
         rightcam = rightcam[:, :, :, 0:3]
         rightcam = img_as_float(rightcam)
 
@@ -53,7 +53,7 @@ class DaggerPolicy(DaggerPolicyBase):
         leftcam = leftcam[:, :, :, 0:3]
         leftcam = img_as_float(leftcam)
 
-        rightcam = obs['rightcam`']
+        rightcam = obs['rightcam']
         rightcam = np.expand_dims(rightcam, axis=0)
         rightcam = rightcam[:, :, :, 0:3]
         rightcam = img_as_float(rightcam)
