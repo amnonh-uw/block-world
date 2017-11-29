@@ -736,14 +736,32 @@ public class Tray : MonoBehaviour
 			r.target_rot = target.transform.rotation.eulerAngles;
 			r.target_screen_pos = centercam.WorldToScreenPoint (target.transform.position);
 
+            string colliderName = null;
 			if (CollisionHappened) {
 				if (CollisionInfo.collider == null)
 					Debug.Log ("Collision occured but collder is null");
-				
+
+                colliderName = CollisionInfo.collider.name;
+
+                if(colliderName == "Cieling")
+                    CollisionHappened = false;
+                if(colliderName == "Floor")
+                    CollisionHappened = false;
+                if(colliderName == "Wall 1")
+                    CollisionHappened = false;
+                if(colliderName == "Wall 2")
+                    CollisionHappened = false;
+                if(colliderName == "Wall 3")
+                    CollisionHappened = false;
+                if(colliderName == "Wall 4")
+                    CollisionHappened = false;
+            }
+
+            if(CollisionHappened) {
                 r.no_collision = false;
-                r.target_collision = CollisionInfo.collider.name == "Target";
+                r.target_collision = colliderName == "Target";
                 r.object_collision = !r.target_collision;
-				r.collision_name = CollisionInfo.collider.name;
+				r.collision_name = colliderName;
 				r.collision_point = CollisionInfo.point;
 				r.collision_screen_point = centercam.WorldToScreenPoint (CollisionInfo.point);
 				r.collision_distance = CollisionInfo.distance;
