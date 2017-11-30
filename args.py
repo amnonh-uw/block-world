@@ -22,6 +22,7 @@ def get_args(argv):
     parser.add_argument('--width', type=int, default = 224)
     parser.add_argument('--height', type=int, default = 224)
     parser.add_argument('--max-objects', type=int, default = 5)
+    parser.add_argument('--save-frequency', type=int, default=500)
     parser.set_defaults(show_obs=False)
     parser.set_defaults(run=True)
 
@@ -31,7 +32,7 @@ def get_args(argv):
         args.save_file_name = args.policy_source + "_save"
 
     if args.summary_dir_name is None:
-        args.summary_dir_name = args.policy_source + "summary"
+        args.summary_dir_name = args.policy_source + "_summary"
 
     if args.dir_name is None:
         args.dir_name = "dataset{}x{}".format(args.width, args.height)

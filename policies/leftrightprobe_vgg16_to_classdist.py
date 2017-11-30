@@ -51,6 +51,24 @@ class DaggerPolicy(DaggerPolicyBase):
             self.class_onehot: class_onehot,
             self.distance: distance}
 
+    def eval_feed_dict(self, obs):
+        leftcam = obs['leftcam']
+        leftcam = np.expand_dims(leftcam, axis=0)
+        leftcam = leftcam[:, :, :, 0:3]
+        leftcam = img_as_float(leftcam)
+
+        rightcam = obs['rightcam']
+        leftcam = np.expand_dims(leftcam, axis=0)
+        rightcam = rightcam[:, :, :, 0:3]
+        rightcam = img_as_float(rightcam)
+
+        probe = obs['probe_direction']
+
+        return {
+            self.leftcam: leftcam,
+            self.rightcam: rightcam,
+            self.probe: probe }
+
     def get_output(self):
         return self.predicted_class_logits, self.predicted_distance
 
