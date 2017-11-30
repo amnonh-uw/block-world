@@ -46,6 +46,25 @@ class DaggerPolicy(DaggerPolicyBase):
             self.probe: probe,
             self.class_onehot: class_onehot}
 
+    def eval_feed_dict(self, obs):
+        leftcam = np.asarray(obs['leftcam'])
+        leftcam = np.expand_dims(leftcam, axis=0)
+        leftcam = leftcam[:, :, :, 0:3]
+        leftcam = img_as_float(leftcam)
+
+        rightcam = np.asarray(obs['rightcam'])
+        rightcam = np.expand_dims(rightcam, axis=0)
+        rightcam = rightcam[:, :, :, 0:3]
+        rightcam = img_as_float(rightcam)
+
+        probe = obs['probe_direction']
+        probe = np.expand_dims(probe, axis=0)
+
+        return {
+            self.leftcam: leftcam,
+            self.rightcam: rightcam,
+            self.probe: probe }
+
     def get_output(self):
         return self.predicted_class_logits
 
@@ -58,6 +77,25 @@ class DaggerPolicy(DaggerPolicyBase):
 
     def policy_initializer(self):
         pass
+
+    @staticmethod
+    def print_results(obs, output, step=None, iteration=None):
+        pred_logits = output
+        pred_logits = np.squeeze(pred_logits)
+        predicted_class = np.argmax(pred_logits)
+        real_class = None
+        if obs['no_collision']:
+            real_class = 0
+        if obs['target_collision']:
+            if real_class is not None:
+                print("results: class already set!")
+            real_class = 1
+        if obs['object_collision']:
+            if real_class is not None:
+                print("results: class already set!")
+            real_class = 2
+
+        print("results: real_class {} precited_class {}".format(real_class, predicted_class))
 
 class vgg16_siamese_with_probe(Network):
     def __init__(self, inputs, trainable=True):

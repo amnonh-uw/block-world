@@ -63,6 +63,7 @@ class DaggerPolicy(DaggerPolicyBase):
         rightcam = img_as_float(rightcam)
 
         probe = obs['probe_direction']
+        probe = np.expand_dims(probe, axis=0)
 
         return {
             self.leftcam: leftcam,
@@ -82,11 +83,11 @@ class DaggerPolicy(DaggerPolicyBase):
 
     @staticmethod
     def print_results(obs, output, step=None, iteration=None):
-        output = np.squeeze(output)
         pred_logits = output[0]
+        pred_logits = np.squeeze(pred_logits)
         pred_distance = output[1]
-        logits = output
-        predicted_class = np.argmax(output)
+        pred_distance = np.squeeze(pred_distance)
+        predicted_class = np.argmax(pred_logits)
         real_class = None
         if obs['no_collision']:
             real_class = 0
