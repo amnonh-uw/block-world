@@ -52,13 +52,13 @@ class DaggerPolicy(DaggerPolicyBase):
             self.distance: distance}
 
     def eval_feed_dict(self, obs):
-        leftcam = obs['leftcam']
+        leftcam = np.asarray(obs['leftcam'])
         leftcam = np.expand_dims(leftcam, axis=0)
         leftcam = leftcam[:, :, :, 0:3]
         leftcam = img_as_float(leftcam)
 
-        rightcam = obs['rightcam']
-        leftcam = np.expand_dims(leftcam, axis=0)
+        rightcam = np.asarray(obs['rightcam'])
+        rightcam = np.expand_dims(rightcam, axis=0)
         rightcam = rightcam[:, :, :, 0:3]
         rightcam = img_as_float(rightcam)
 
