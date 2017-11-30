@@ -36,7 +36,6 @@ class DaggerPolicy(DaggerPolicyBase):
 
         return {
             self.centercam: centercam,
-            self.depthcam: depthcam,
             self.probe: probe,
             self.class_onehot: class_onehot}
 
