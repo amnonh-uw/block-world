@@ -62,6 +62,24 @@ class DaggerPolicy(DaggerPolicyBase):
 
         return class_loss + distance_loss
 
+    @staticmethod
+    def print_results(obs, output, step=None, iteration=None):
+        output = np.squeeze(output)
+        predicted_class = np.argmax(output)
+        real_class = None
+        if obs['no_collision']:
+            real_class = 0
+        if obs['target_collision']:
+            if real_class is not None:
+                print("results: class already set!")
+            real_class = 1
+        if obs['object_collision']:
+            if real_class is not None:
+                print("results: class already set!")
+            real_class = 2
+
+        print("results: real_class {} precited_class {}".format(real_class, predicted_class))
+
     def print_batch(self, batch):
         # print("batch keys {}".format(list(batch.keys())))
         pass

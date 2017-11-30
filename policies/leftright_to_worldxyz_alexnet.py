@@ -8,8 +8,6 @@ from skimage import img_as_float
 
 #
 #
-# Learn to transform from image to x,y position in image of finger and target
-# using an alexnet convolutional network
 #
 #
 
