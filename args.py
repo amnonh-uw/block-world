@@ -18,6 +18,7 @@ def get_args(argv):
     parser.add_argument('--max-samples', type=str, default=None)
     parser.add_argument('--policy-source', type=str, default='policies.null')
     parser.add_argument('--save-file-name', type=str, default=None)
+    parser.add_argument('--summary-dir-name', type=str, default=None)
     parser.add_argument('--width', type=int, default = 224)
     parser.add_argument('--height', type=int, default = 224)
     parser.add_argument('--max-objects', type=int, default = 5)
@@ -29,8 +30,11 @@ def get_args(argv):
     if args.save_file_name is None:
         args.save_file_name = args.policy_source + "_save"
 
+    if args.summary_dir_name is None:
+        args.summary_dir_name = args.policy_source + "summary"
+
     if args.dir_name is None:
-        args.dir_name = "storage{}x{}".format(args.width, args.height)
+        args.dir_name = "dataset{}x{}".format(args.width, args.height)
 
     return args
 
