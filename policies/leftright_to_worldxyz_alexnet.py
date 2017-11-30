@@ -69,9 +69,10 @@ class DaggerPolicy(DaggerPolicyBase):
         return tf.losses.mean_squared_error(self.worldxyz, self.predicted_worldxyz)
 
     @staticmethod
-    def print_results(obs, output, step=None):
+    def print_results(obs, output, step=None, iteration=None):
         worldxyz = obs['finger_pos'] - obs['target_pos']
-        print("preidcted worldxyz {} actual worldxyz {}".format(output, worldxyz))
+        loss = np.linalg.norm(worldxyz - output)
+        print("results: loss {} preidcted worldxyz {} actual worldxyz {}".format(loss, output, worldxyz))
 
     def print_batch(self, batch):
         pass
