@@ -63,3 +63,11 @@ class DaggerPolicyBase:
 
     def eval_feed_dict(self, obs_dict):
         raise NotImplemented("eval_feed_dict")
+
+    def action(self, output, expert_action):
+        # output are the tensors return from get_output, after evaluating by the network
+        # note that they need to be squeezed - the first index is goign to be 1
+        # expert action is the action determined by the network
+        # if one of the outputs is an action, we can return that
+        # if it is not, we can use the expert_action
+        return expert_action

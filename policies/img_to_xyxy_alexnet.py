@@ -91,7 +91,6 @@ class DaggerPolicy(DaggerPolicyBase):
         # self.base_network.load('vgg16.npy', tf.get_default_session(), ignore_missing=True)
         pass
 
-
 class alexnet(Network):
     def __init__(self, inputs, trainable=True):
         self.inputs = []

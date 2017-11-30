@@ -56,7 +56,9 @@ class DaggerPolicy(DaggerPolicyBase):
 
     def get_loss(self):
         class_loss =  tf.losses.softmax_cross_entropy(self.class_onehot, self.predicted_class_logits)
+        tf.summary.scalar('class_loss', class_loss)
         distance_loss = tf.losses.mean_squared_error(self.distance, self.predicted_distance)
+        tf.summary.scalar('distance_loss', distance_loss)
 
         return class_loss + distance_loss
 

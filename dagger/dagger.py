@@ -100,14 +100,21 @@ class Dagger:
                 steps = 0
 
                 while not done:
-                    feed_dict = self.policy.eval_feed_dict(obs)
-                    # run policy
+                    if self.num_probes != 0:
+                        for p in range(self.num_probes):
+                            obs = self.env.random_probe()
+                            feed_dict = self.policy.eval_feed_dict(obs)
+                            output = sess.run(self.output_hat, feed_dict=feed_dict)
+                            expert_action = self.env.expert_action()
+                            action = self.policy.action(output, expert_action)
+                            self.policy.print_results(obs, output, step=steps)
+                    else:
+                        feed_dict = self.policy.eval_feed_dict(obs)
+                        output = sess.run(self.output_hat, feed_dict=feed_dict)
+                        expert_action = self.env.expert_action()
+                        action = self.policy.action(output, expert_action)
+                        self.policy.print_results(obs, action, iteration=i, step=steps)
 
-                    action = self.action_hat.eval(feed_dict=feed_dict)
-                    action = np.squeeze(action)
-                    self.policy.print_results(obs, action, iteration = i, step=steps)
-
-                    action = self.env.expert_action()
                     obs, r, done, _ = self.env.step(action)
                     totalr += r
                     steps += 1
@@ -118,15 +125,20 @@ class Dagger:
     def build_graph(self):
         with tf.variable_scope("policy"):
             self.policy.build_graph(self.dir_name)
-            self.action_hat = self.policy.get_output()
+            self.output_hat = self.policy.get_output()
             self.loss = self.policy.get_loss()
             if self.loss is not None:
                 self.train_op = tf.train.AdamOptimizer(learning_rate=self.learning_rate).minimize(self.loss)
+                tf.summary.scalar('loss', self.loss)
+
+            self.merged = tf.summary.merge_all()
+            if self.summary_dir_name is not None:
+                self.summary_writer = tf.summary.FileWriter(self.summary_dir_name, tf.get_default_graph())
 
     def build_test_graph(self):
         with tf.variable_scope("policy"):
             self.policy.build_graph(None)
-            self.action_hat  = self.policy.get_output()
+            self.output_hat  = self.policy.get_output()
 
     def save_policy(self, fname):
         if fname == None:
@@ -209,7 +221,8 @@ class Dagger:
                 batch = sess.run(get_next)
                 self.policy.print_batch(batch)
                 feed_dict = self.policy.loss_feed_dict(batch)
-                _, loss = sess.run([self.train_op, self.loss], feed_dict=feed_dict)
+                _, loss, summary = sess.run([self.train_op, self.loss, self.merged], feed_dict=feed_dict)
+                self.summary_writer.add_summary(summary, step)
                 step += 1
                 if (step % self.report_frequency == 0):
                     print ("train step {} objective batch loss {}".format(step, loss))
@@ -232,12 +245,11 @@ class Dagger:
             steps = 0
 
             while not done:
+                sess = tf.get_default_session()
                 feed_dict = self.policy.eval_feed_dict(obs)
-                # run policy
-
-                action = self.action_hat.eval(feed_dict=feed_dict)
-                action = np.squeeze(action)
+                output = sess.run(self.output_hat, feed_dict=feed_dict)
                 expert_action = self.env.expert_action()
+                action = self.policy.action(output, expert_action)
 
                 # data aggregation
                 path = self.add_sample(obs)

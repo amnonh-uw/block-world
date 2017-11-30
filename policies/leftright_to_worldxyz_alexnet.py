@@ -69,26 +69,9 @@ class DaggerPolicy(DaggerPolicyBase):
         return tf.losses.mean_squared_error(self.worldxyz, self.predicted_worldxyz)
 
     @staticmethod
-    def print_results(obs, action, step=None):
-        pos1 = obs['finger_screen_pos']
-        pos1 = pos1[0:2]
-        act1 = action[0:2]
-        pos2 = obs['target_screen_pos']
-        pos2 = pos2[0:2]
-        act2 = action[2:4]
-
-        print("finger screen pos: {} act {} delta {}".format(pos1, act1, pos1-act1))
-        print("target screen pos: {} act {} delta {}".format(pos2, act2, pos2-act2))
-
-        if step != None:
-            im = obs['centercam']
-            draw = ImageDraw.Draw(im)
-            l1 = (int(pos1[0]), int(pos1[1]))
-            l2 = (int(pos2[0]), int(pos2[1]))
-            draw.rectangle((l1, l2))
-            del draw
-
-            im.save("enjoy" + str(step) + ".png")
+    def print_results(obs, output, step=None):
+        worldxyz = obs['finger_pos'] - obs['target_pos']
+        print("preidcted worldxyz {} actual worldxyz {}".format(output, worldxyz))
 
     def print_batch(self, batch):
         pass
