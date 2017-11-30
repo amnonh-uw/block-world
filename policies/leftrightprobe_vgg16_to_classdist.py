@@ -52,7 +52,7 @@ class DaggerPolicy(DaggerPolicyBase):
             self.distance: distance}
 
     def get_output(self):
-        return self.predicted_class_logits
+        return self.predicted_class_logits, self.predicted_distance
 
     def get_loss(self):
         class_loss =  tf.losses.softmax_cross_entropy(self.class_onehot, self.predicted_class_logits)
@@ -65,6 +65,9 @@ class DaggerPolicy(DaggerPolicyBase):
     @staticmethod
     def print_results(obs, output, step=None, iteration=None):
         output = np.squeeze(output)
+        pred_logits = output[0]
+        pred_distance = output[1]
+        logits = output
         predicted_class = np.argmax(output)
         real_class = None
         if obs['no_collision']:
