@@ -17,7 +17,7 @@ class DaggerPolicy(DaggerPolicyBase):
         self.rightcam = tf.placeholder(tf.float32, shape=[None, self.width, self.height, 3], name='rightcam')
         self.probe = tf.placeholder(tf.float32, shape=[None, 3])
         self.class_onehot = tf.placeholder(tf.float32, shape=[None, 3])
-        self.distance = tf.placeholder(tf.float32, shape=[None])
+        self.distance = tf.placeholder(tf.float32, shape=[None, 1])
 
         inputs = {'img1': self.leftcam,
                   'img2': self.rightcam,
@@ -42,7 +42,7 @@ class DaggerPolicy(DaggerPolicyBase):
         object_collision = np.squeeze(batch['object_collision'])
         class_onehot = np.stack((no_collision, target_collison, object_collision), axis=-1)
 
-        distance = np.squeese(batch['distance'])
+        distance = batch['collision_distance']
 
         return {
             self.leftcam: leftcam,
@@ -150,7 +150,7 @@ class vgg16_siamese_with_probe(Network):
         (self.feed('dagger_fc9')
          .fc(512, name="dagger_fc11")
          .fc(256, name="dagger_fc12")
-         .fc(3, name="final_distance", relu=False))
+         .fc(1, name="final_distance", relu=False))
 
     @staticmethod
     def mean():
