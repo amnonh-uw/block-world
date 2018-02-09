@@ -167,22 +167,8 @@ class env:
         r = self.do("clear_tray")
         self.extract_response(r.json())
 
-    def set_finger(self, args):
-        r = self.do("set_finger", args)
-        self.extract_response(r.json())
-
-    def set_target(self, args):
-        r = self.do("set_target", args)
-        self.extract_response(r.json())
-
-    def move_finger(self, inc_pose):
-        inc_pose = self.round_pose(inc_pose)
-        r = self.do("move_finger", str(inc_pose))
-        self.extract_response(r.json())
-
-    def probe_finger(self, direction):
-        direction = self.round_pose(direction)
-        r = self.do("probe_finger", str(direction))
+    def rotate_joint(self, args):
+        r = self.do("rotate_joint", args)
         self.extract_response(r.json())
 
     def check_occupied(self, inc_pose):
@@ -277,15 +263,8 @@ class env:
         self.raw_multdepthcam = self.extract_cam(data, "multichanneldepthcam")
         self.obs['multichanneldepthcam'] = self.multichanneldepthcam = self.decode_twochanneldepth(self.raw_multdepthcam)
         self.obs['normalcam'] = self.normalcam = self.extract_cam(data, "normalcam");
-        self.obs['target_pos'] = self.target_pos = self.extract_vector3(data, "target_pos")
-        self.obs['finger_pos'] = self.finger_pos = self.extract_vector3(data, "finger_pos")
-        self.obs['finger_screen_pos'] = self.finger_screen_pos = self.extract_vector3(data, "finger_screen_pos")
-        self.obs['target_screen_pos'] = self.target_screen_pos = self.extract_vector3(data, "target_screen_pos")
-        self.obs['target_rot'] = self.target_rot = self.extract_vector3(data, "target_rot")
-        self.obs['finger_rot'] = self.finger_rot = self.extract_vector3(data, "finger_rot")
         self.obs['no_collision'] =  self.no_collision = self.extract_bool(data, "no_collision")
         self.collision = not self.no_collision
-        self.obs['target_collision'] = self.target_collision = self.extract_bool(data, "target_collision")
         self.obs['object_collision'] = self.object_collision = self.extract_bool(data, "object_collision")
         self.obs['collision_name'] = self.collision_name = self.extract_string(data, "collision_name")
         self.obs['collision_point'] = self.collision_point = self.extract_vector3(data, "collision_point")
@@ -302,6 +281,46 @@ class env:
         s = s.replace(")", "")
 
         return s.split(delim)
+
+
+import pygame
+import xbox360_controller
+def joystick(x, d):
+    joints = [ "right_s0", "right_s1", "right_e0", "right_e1", "right_w0", "right_w1", "right_w2"] 
+    joint = 0
+    
+    pygame.init()
+    my_controller = xbox360_controller.Controller(0)
+    done = False
+    while not done:
+        # event handling
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                 done=True
+
+            if event.type == pygame.JOYBUTTONDOWN:
+                if event.button == xbox360_controller.A:
+                    joint += 1
+                if event.button == xbox360_controller.B:
+                    joint -= 1
+                if event.button == xbox360_controller.Y:
+                    done = True
+
+                if joint < 0:
+                    joint += len(joints)
+                if joint >= len(joints):
+                    joint -= len(joints)
+
+                print("joint is {}", joints[joint]);
+
+
+        # handle joysticks
+        left_x, left_y = my_controller.get_left_stick()
+        if left_x != 0:
+            s = joints[joint] + "," + str(left_x)
+            print(s)
+            x.rotate_joint(s)
+            d.show(x)
 
 def env_test(argv):
     parser = argparse.ArgumentParser(description='block_world')
@@ -332,7 +351,7 @@ def env_test(argv):
     d = _display(show_obs=cmd_args.show_obs)
 
     if cmd_args.reset:
-        x.reset(tray_length=3.0, tray_width=2.0, stereo_distance=0.5, width=224, height=224)
+        x.reset(tray_length=1.50, tray_width=1.0, stereo_distance=0.5, width=224, height=224)
         d.show(x)
 
     var_dict = dict()
@@ -344,6 +363,9 @@ def env_test(argv):
         def do_quit(self, args):
             x.quit()
             raise SystemExit
+    
+        def do_joystick(self, args):
+            joystick(x, d)
 
         def do_EOF(self, args):
             x.quit()
@@ -369,24 +391,12 @@ def env_test(argv):
                 var_dict[args] = json_value
             print(json.dumps(json_value))
 
-        def do_set_finger(self, args):
-            x.set_finger(args)
-            d.show(x)
-
-        def do_set_target(self, args):
-            x.set_target(args)
-            d.show(x)
-
         def do_clear_tray(self):
             x.clear_tray()
             d.show(x)
 
-        def do_move_finger(self, args):
-            x.move_finger(args)
-            d.show(x)
-
-        def do_probe_finger(self, args):
-            x.probe_finger(args)
+        def do_rotate_joint(self, args):
+            x.rotate_joint(args)
             d.show(x)
 
         def do_move_cams(self, args):
@@ -437,31 +447,35 @@ def env_test(argv):
                             self.do_move_finger(s[:-1])
                         else:
                             self.do_move_cams(s[:-1])
+        def do_set_dir(self, args):
+            d.set_dir(args)
 
     prompt = MyPrompt()
     prompt.prompt = '>>> '
     prompt.cmdloop()
 
 # import cv2
+import os
 class _display:
     def __init__(self, show_obs=True):
         self.show_obs = show_obs
         self.first = True
+        self.directory = None
+
+    def set_dir(self, name):
+        if not os.path.exists(name):
+            os.makedirs(name)
+            self.count = 0
+            self.directory = name
+        else:
+            print("directory {} exists".format(name))
+
 
     def show(self, env):
-        env.save_cams("/tmp/")
-        if env.collision:
-            if env.object_collision:
-                print("object collision")
-            if env.target_collision:
-                print("target collision")
-            print("collision_name: {}".format(env.collision_name))
-            print("collision_point: {}".format(env.collision_point))
-            print("collision_screen_point: {}".format(env.collision_screen_point))
-            print("collision_distance: {}".format(env.collision_distance))
+        if self.directory is not None:
+            self.count += 1
+            env.save_cams(self.directory + "/" + str(self.count).zfill(6) + "_")
+
 
 if __name__ == "__main__":
     env_test(sys.argv[1:])
-
-
-
